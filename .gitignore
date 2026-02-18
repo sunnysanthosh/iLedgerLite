@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+*.iml
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Infrastructure
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfvars
+!*.tfvars.example
+
+# Docker
+docker-compose.override.yml
+
+# ML
+*.pkl
+*.h5
+*.pt
+mlruns/
+
+# Coverage / Testing
+htmlcov/
+.coverage
+.pytest_cache/
+coverage/
