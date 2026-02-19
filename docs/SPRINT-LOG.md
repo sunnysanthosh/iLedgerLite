@@ -326,3 +326,78 @@ alembic history
 - Build workflow uses GHCR (no external registry dependency) with GitHub's built-in `GITHUB_TOKEN`
 - Deploy workflow is manual (`workflow_dispatch`) to prevent accidental production deployments
 - Deploy expects Kubernetes namespaces named `ledgerlite-staging` and `ledgerlite-production`
+
+---
+
+## Sprint 7 — Flutter Mobile App MVP (Completed)
+
+**Goal:** Core mobile experience — login, dashboard, transaction entry, account management.
+
+**Delivered:**
+
+### Project Setup (`apps/mobile-app/`)
+- Clean Architecture folder structure: `core/` (api, theme, storage, router, widgets) + `features/` (auth, dashboard, transactions, accounts)
+- State management: Riverpod (flutter_riverpod)
+- Navigation: go_router with ShellRoute for bottom navigation
+- API client: Dio with AuthInterceptor (JWT auto-attach, 401 → token refresh → retry)
+- Theme: Material 3 with light/dark mode, LedgerLite brand colors (green primary)
+- Secure storage: flutter_secure_storage with Android encrypted shared preferences
+
+### Auth Feature
+- Login screen with email/password, form validation, error display
+- Registration screen with full name, email, optional phone, password + confirmation
+- Auto-login after registration
+- Token persistence across app restarts
+- Logout with token clearing
+
+### Dashboard Feature
+- Balance card showing total balance, income, and expenses
+- Quick stats row (account count, transaction count)
+- Recent transactions list (last 5) with type-colored icons
+- Pull-to-refresh
+- Quick-add FAB navigating to add transaction
+- Empty state with prompt to add first transaction
+
+### Transaction Feature
+- Transaction list with type filter (all/income/expense/transfer)
+- Filter chip indicator with clear button
+- Add transaction form with:
+  - Segmented type selector (income/expense/transfer)
+  - Amount input with INR prefix
+  - Account dropdown (from API)
+  - Category dropdown (filtered by transaction type)
+  - Date picker
+  - Description field
+- Automatic list refresh after adding
+
+### Account Feature
+- Account list with type icons, balance display, currency badge
+- Add account form with:
+  - Name input
+  - Type selection via ChoiceChips (cash, bank, credit card, wallet, loan)
+  - Currency dropdown (INR, USD, EUR, GBP, SGD, MYR)
+- Empty state with prompt to add first account
+
+### Core Widgets
+- `AmountText` — formatted currency display with income/expense coloring
+- `LoadingOverlay` — semi-transparent loading indicator
+- `ShellScreen` — bottom navigation bar (Dashboard, Transactions, Accounts)
+
+**File Count:** 28 Dart source files + pubspec.yaml + analysis_options.yaml
+
+**Key Packages:**
+- `flutter_riverpod` — state management
+- `dio` — HTTP client
+- `go_router` — declarative routing
+- `flutter_secure_storage` — encrypted token storage
+- `fl_chart` — chart library (available for Sprint 8 reports)
+- `intl` — date/number formatting
+- `sqflite` — local SQLite (available for Sprint 8 offline sync)
+
+**Key Decisions:**
+- Riverpod over Bloc for simpler boilerplate and native async support
+- go_router with ShellRoute for persistent bottom navigation across main screens
+- API base URLs use `10.0.2.2` (Android emulator localhost alias), configurable via `--dart-define`
+- Auth interceptor handles token refresh transparently — no auth logic in feature code
+- Category dropdown dynamically filters by selected transaction type
+- All monetary amounts displayed as formatted strings with currency symbols

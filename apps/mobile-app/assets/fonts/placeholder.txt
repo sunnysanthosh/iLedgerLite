@@ -1,0 +1,2 @@
+Place custom font files here (e.g., .ttf or .otf).
+The app uses Google Fonts by default, so custom fonts are optional.

@@ -1,6 +1,6 @@
 # LedgerLite — Implementation Roadmap
 
-## Current State (as of Sprint 6 — 6A + 6D)
+## Current State (as of Sprint 7)
 
 | Component | Status |
 |-----------|--------|
@@ -20,7 +20,7 @@
 | **docs/** | Done — API.md, SPRINT-LOG.md |
 | **shared/** | Done — base settings, pagination, auth utilities |
 | **CLAUDE.md** | Done — coding conventions, testing patterns, CI/CD, branching strategy |
-| **apps/mobile-app** | Empty (.gitkeep) |
+| **apps/mobile-app** | Done — Flutter MVP (auth, dashboard, transactions, accounts) — 28 Dart files |
 | **apps/web-dashboard** | Empty (.gitkeep) |
 | **infrastructure/k8s, terraform** | Empty (.gitkeep) — deferred to 6B/6C |
 
@@ -201,33 +201,33 @@
 
 > **Goal:** Core mobile experience — login, dashboard, transaction entry.
 
-### 7A. Flutter Project Setup (`apps/mobile-app/`)
-- [ ] `flutter create` with Clean Architecture folder structure
-- [ ] State management setup (Riverpod or Bloc)
-- [ ] SQLite local database (sqflite/drift)
-- [ ] API client layer (Dio + interceptors for JWT)
-- [ ] Theme system (LedgerLite brand colors, typography)
+### 7A. Flutter Project Setup (`apps/mobile-app/`) — DONE
+- [x] Clean Architecture folder structure (core/, features/, assets/)
+- [x] State management: Riverpod (flutter_riverpod + riverpod_annotation)
+- [x] SQLite local database: sqflite dependency ready
+- [x] API client layer: Dio + AuthInterceptor for JWT auto-attach + refresh
+- [x] Theme system: Material 3, light/dark, LedgerLite brand colors
 
-### 7B. Auth Flow
-- [ ] Login screen (email + password)
-- [ ] Registration screen
-- [ ] Secure token storage (flutter_secure_storage)
-- [ ] Auto-refresh token interceptor
+### 7B. Auth Flow — DONE
+- [x] Login screen (email + password, form validation, error display)
+- [x] Registration screen (name, email, phone, password with confirmation)
+- [x] Secure token storage (flutter_secure_storage with encrypted prefs)
+- [x] Auto-refresh token interceptor (401 → refresh → retry)
 
-### 7C. Dashboard Screen
-- [ ] Total balance card
-- [ ] Income vs Expense summary (current month)
-- [ ] Recent transactions list
-- [ ] Quick-add floating action button
+### 7C. Dashboard Screen — DONE
+- [x] Total balance card with income/expense summary
+- [x] Quick stats row (account count, transaction count)
+- [x] Recent transactions list (last 5)
+- [x] Quick-add floating action button
 
-### 7D. Transaction Screens
-- [ ] Transaction list (filterable by account, category, date)
-- [ ] Add/edit transaction form (amount, category picker, payment method, notes)
-- [ ] Category selection screen
+### 7D. Transaction Screens — DONE
+- [x] Transaction list with type filter (income/expense/transfer)
+- [x] Add transaction form (amount, account picker, category picker, date, description)
+- [x] Category dropdown filtered by transaction type
 
-### 7E. Account Management
-- [ ] Account list screen
-- [ ] Add account form
+### 7E. Account Management — DONE
+- [x] Account list screen with balance display and type icons
+- [x] Add account form (name, type chips, currency selector)
 
 ---
 
@@ -346,4 +346,4 @@
 
 ## Recommended Next Step
 
-**Start Sprint 7 → Flutter Mobile App (MVP Screens)**, to build the core mobile experience — login, dashboard, transaction entry. Alternatively, complete Sprint 6B/6C (Kubernetes + Terraform) for full production infrastructure.
+**Start Sprint 8 → Mobile Ledger + Reports + Offline Sync**, to add business ledger screens, report viewing, offline sync, and settings. Alternatively, complete Sprint 6B/6C (Kubernetes + Terraform) for full production infrastructure.
