@@ -270,3 +270,59 @@ This document tracks all completed and in-progress sprints for the LedgerLite pr
 - Pull returns all changes since a timestamp, or all records if no timestamp given
 - SyncLog records every push/pull for audit and device tracking
 - Pydantic `@field_validator` on pull response schemas to convert `Decimal` → `str` for JSON serialization
+
+---
+
+## Sprint 6 — Database Migrations + CI/CD Build/Deploy (Completed — 6A + 6D)
+
+**Goal:** Production-grade database management and CI/CD build/deploy pipelines. (6B Kubernetes and 6C Terraform deferred.)
+
+**Delivered:**
+
+### 6A. Alembic Migrations (`database/migrations/`)
+- Unified Alembic configuration at `database/` with `alembic.ini` and async-capable `env.py`
+- `ALEMBIC_DATABASE_URL` environment variable override for different environments
+- **Migration 001**: Initial schema — all 10 tables (users, user_settings, accounts, categories, transactions, customers, ledger_entries, receipts, notifications, sync_log), 9 indexes, check constraints for enums
+- **Migration 002**: Seed 29 system categories (8 income + 21 expense) with icons, matching `database/seeds/categories.sql`
+- Full downgrade support: drop tables in correct FK order, delete seeded categories
+
+### 6D. CI/CD Build & Deploy (`.github/workflows/`)
+- **build.yml** — Docker build + push to GitHub Container Registry (GHCR)
+  - Triggers on push to `main` when `services/**` changes
+  - Change detection: only builds services with modified files
+  - Matrix strategy: parallel builds per service
+  - Tags images with git SHA and `latest`
+  - Uses `docker/build-push-action@v6` with GHCR authentication
+- **deploy.yml** — Manual deploy to staging or production
+  - `workflow_dispatch` trigger with environment choice (staging/production) and service selection
+  - Configures kubectl via `KUBECONFIG` secret
+  - Updates Kubernetes deployments with new image tags
+  - Includes migration step placeholder and deployment verification
+
+**Alembic Usage:**
+```bash
+# Run from database/ directory
+cd database
+
+# Apply all migrations
+alembic upgrade head
+
+# Apply with custom DB URL
+ALEMBIC_DATABASE_URL=postgresql://user:pass@host:5432/db alembic upgrade head
+
+# Rollback one step
+alembic downgrade -1
+
+# View current version
+alembic current
+
+# View migration history
+alembic history
+```
+
+**Key Decisions:**
+- Unified Alembic at repo root level (`database/`) rather than per-service, since all services share a single PostgreSQL database
+- Seed migration uses `op.bulk_insert` for portable category seeding (no raw SQL with `gen_random_uuid()`)
+- Build workflow uses GHCR (no external registry dependency) with GitHub's built-in `GITHUB_TOKEN`
+- Deploy workflow is manual (`workflow_dispatch`) to prevent accidental production deployments
+- Deploy expects Kubernetes namespaces named `ledgerlite-staging` and `ledgerlite-production`

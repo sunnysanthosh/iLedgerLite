@@ -1,6 +1,6 @@
 # LedgerLite — Implementation Roadmap
 
-## Current State (as of Sprint 5 completion)
+## Current State (as of Sprint 6 — 6A + 6D)
 
 | Component | Status |
 |-----------|--------|
@@ -12,17 +12,17 @@
 | **notification-service** | Done — 3 endpoints, 12 tests |
 | **ai-service** | Done — 3 endpoints, 16 tests |
 | **sync-service** | Done — 3 endpoints, 14 tests |
-| **database/schema.sql** | Done — 10 tables (added sync_log), indexes |
+| **database/schema.sql** | Done — 10 tables, indexes |
 | **database/seeds/** | Done — 29 system categories |
+| **database/migrations/** | Done — Alembic (initial schema + seed migration) |
 | **docker-compose.yml** | Done — prefixed env vars, JWT_SECRET, correct Redis DBs |
-| **CI/CD** | Done — GitHub Actions (test + lint), Makefile, pyproject.toml |
+| **CI/CD** | Done — test, lint, build (GHCR), deploy (staging/prod) |
 | **docs/** | Done — API.md, SPRINT-LOG.md |
 | **shared/** | Done — base settings, pagination, auth utilities |
 | **CLAUDE.md** | Done — coding conventions, testing patterns, CI/CD, branching strategy |
 | **apps/mobile-app** | Empty (.gitkeep) |
 | **apps/web-dashboard** | Empty (.gitkeep) |
-| **infrastructure/k8s, terraform** | Empty (.gitkeep) |
-| **database/migrations** | Not started |
+| **infrastructure/k8s, terraform** | Empty (.gitkeep) — deferred to 6B/6C |
 
 **Total: 146 tests passing across 8 services**
 **All backend microservices complete.**
@@ -168,12 +168,12 @@
 
 > **Goal:** Production-grade database management and deployment config.
 
-### 6A. Alembic Migrations (`database/migrations/`)
-- [ ] Initialize Alembic config in each service (or unified at repo root)
-- [ ] Generate initial migration from `schema.sql`
-- [ ] Add seed data migration (system categories, default settings)
+### 6A. Alembic Migrations (`database/migrations/`) — DONE
+- [x] Initialize Alembic config (unified at `database/` with env var override)
+- [x] Generate initial migration from `schema.sql` (10 tables, all indexes, check constraints)
+- [x] Add seed data migration (29 system categories — 8 income + 21 expense)
 
-### 6B. Kubernetes Manifests (`infrastructure/kubernetes/`)
+### 6B. Kubernetes Manifests (`infrastructure/kubernetes/`) — DEFERRED
 - [ ] Deployment + Service YAML per microservice
 - [ ] ConfigMap for shared env vars
 - [ ] Secrets for JWT_SECRET, DB passwords
@@ -181,7 +181,7 @@
 - [ ] PostgreSQL StatefulSet (or managed DB reference)
 - [ ] Redis Deployment
 
-### 6C. Terraform (`infrastructure/terraform/`)
+### 6C. Terraform (`infrastructure/terraform/`) — DEFERRED
 - [ ] VPC, subnets, security groups
 - [ ] EKS/GKE cluster module
 - [ ] RDS/CloudSQL for PostgreSQL
@@ -189,11 +189,11 @@
 - [ ] S3/GCS bucket for receipt uploads
 - [ ] IAM roles and policies
 
-### 6D. CI/CD (`.github/workflows/`)
+### 6D. CI/CD (`.github/workflows/`) — DONE
 - [x] `test.yml` — run pytest per service on PR (done in Retro 4.5)
 - [x] `lint.yml` — ruff check + format check (done in Retro 4.5)
-- [ ] `build.yml` — Docker build + push to registry
-- [ ] `deploy.yml` — deploy to staging/production via ArgoCD or kubectl
+- [x] `build.yml` — Docker build + push to GHCR (per-service, change detection)
+- [x] `deploy.yml` — manual deploy to staging/production via kubectl
 
 ---
 
@@ -346,4 +346,4 @@
 
 ## Recommended Next Step
 
-**Start Sprint 6 → Database Migrations + Infrastructure**, to establish Alembic migrations, Kubernetes manifests, Terraform IaC, and CI/CD build/deploy pipelines for production readiness.
+**Start Sprint 7 → Flutter Mobile App (MVP Screens)**, to build the core mobile experience — login, dashboard, transaction entry. Alternatively, complete Sprint 6B/6C (Kubernetes + Terraform) for full production infrastructure.
