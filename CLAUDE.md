@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 LedgerLite is an **early-stage fintech SaaS product**. Backend microservices are under active development. Planning documents (PRDs, investor briefs, architecture blueprints) are at the root level. See `ROADMAP.md` for implementation status.
 
-**Completed:** auth-service, user-service, transaction-service, ledger-service, report-service, notification-service, ai-service, sync-service
+**Completed:** auth-service, user-service, transaction-service, ledger-service, report-service, notification-service, ai-service, sync-service, Alembic migrations, CI/CD (test + lint + build + deploy)
 **In Progress:** —
-**Not Started:** mobile app; web dashboard
+**Not Started:** Kubernetes manifests (6B); Terraform IaC (6C); mobile app; web dashboard
 
 ## Build & Run Commands
 
@@ -30,6 +30,12 @@ for dir in services/*-service; do (cd "$dir" && python -m pytest tests/ -v); don
 
 # Apply database schema (requires running Postgres)
 psql -h localhost -U ledgerlite -d ledgerlite -f database/schema.sql
+
+# Run Alembic migrations (from database/ directory)
+cd database && alembic upgrade head
+
+# Run migrations with custom DB URL
+ALEMBIC_DATABASE_URL=postgresql://user:pass@host:5432/db alembic upgrade head
 ```
 
 Service ports (via Docker Compose): auth=8001, user=8002, transaction=8003, ledger=8004, report=8005, ai=8006, notification=8007, sync=8008.

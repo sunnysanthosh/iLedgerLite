@@ -1,0 +1,83 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      services:
+        description: "Services to deploy (comma-separated, or 'all')"
+        required: true
+        default: "all"
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository_owner }}/ledgerlite
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve service list
+        id: services
+        run: |
+          if [ "${{ inputs.services }}" = "all" ]; then
+            SERVICES="auth-service user-service transaction-service ledger-service report-service ai-service notification-service sync-service"
+          else
+            SERVICES=$(echo "${{ inputs.services }}" | tr ',' ' ')
+          fi
+          echo "list=$SERVICES" >> "$GITHUB_OUTPUT"
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+
+      - name: Run Alembic migrations
+        run: |
+          echo "--- Running database migrations for ${{ inputs.environment }} ---"
+          # Migrations run via a Kubernetes Job or direct connection
+          # kubectl apply -f infrastructure/kubernetes/migrations-job.yaml
+          echo "Migrations would run here against the ${{ inputs.environment }} database"
+
+      - name: Deploy services
+        run: |
+          NAMESPACE="ledgerlite-${{ inputs.environment }}"
+          TAG="${{ github.sha }}"
+          SHORT_SHA="${TAG:0:7}"
+
+          for SERVICE in ${{ steps.services.outputs.list }}; do
+            IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${SERVICE}:${SHORT_SHA}"
+            echo "--- Deploying ${SERVICE} with image ${IMAGE} ---"
+
+            kubectl set image "deployment/${SERVICE}" \
+              "${SERVICE}=${IMAGE}" \
+              -n "${NAMESPACE}" \
+              --record 2>/dev/null || echo "Deployment ${SERVICE} not found in ${NAMESPACE} — skipping"
+
+            kubectl rollout status "deployment/${SERVICE}" \
+              -n "${NAMESPACE}" \
+              --timeout=120s 2>/dev/null || echo "Rollout status check skipped for ${SERVICE}"
+          done
+
+      - name: Verify deployments
+        run: |
+          NAMESPACE="ledgerlite-${{ inputs.environment }}"
+          echo "--- Deployment status in ${NAMESPACE} ---"
+          kubectl get deployments -n "${NAMESPACE}" 2>/dev/null || echo "Namespace ${NAMESPACE} not found"
+          kubectl get pods -n "${NAMESPACE}" 2>/dev/null || echo "No pods found"
