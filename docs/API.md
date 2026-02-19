@@ -9,7 +9,9 @@
 | Transaction Service  | 8003 | `http://localhost:8003`   |
 | Ledger Service       | 8004 | `http://localhost:8004`   |
 | Report Service       | 8005 | `http://localhost:8005`   |
+| AI Service           | 8006 | `http://localhost:8006`   |
 | Notification Service | 8007 | `http://localhost:8007`   |
+| Sync Service         | 8008 | `http://localhost:8008`   |
 
 ## Authentication
 
@@ -1074,6 +1076,284 @@ Health check endpoint. No authentication required.
 
 ---
 
+## AI Service (port 8006)
+
+All endpoints require `Authorization: Bearer <access_token>`.
+
+### POST /ai/categorize
+
+Predict a category for a transaction based on its description and amount. Uses rule-based keyword matching with confidence scoring.
+
+**Request Body:**
+
+```json
+{
+  "description": "Uber ride to airport",
+  "amount": "450.00",
+  "type": "expense"
+}
+```
+
+| Field       | Type    | Required | Notes                                    |
+|-------------|---------|----------|------------------------------------------|
+| description | string  | Yes      | Transaction description (1-500 chars)    |
+| amount      | decimal | Yes      | Must be positive                         |
+| type        | string  | No       | One of: `income`, `expense` (default: `expense`) |
+
+**Response:** `200 OK`
+
+```json
+{
+  "predictions": [
+    {
+      "category_id": "uuid",
+      "category_name": "Transport",
+      "confidence": 0.72
+    },
+    {
+      "category_id": "uuid",
+      "category_name": "Travel",
+      "confidence": 0.45
+    }
+  ]
+}
+```
+
+**Notes:** Confidence is calculated as `(keyword_length / description_length) + 0.3`, capped at 0.95. If a matching category exists in the user's DB, the `category_id` is populated; otherwise it is `null`.
+
+---
+
+### GET /ai/insights
+
+Get spending insights including anomaly detection, trends, and top categories for the last 30 days.
+
+**Response:** `200 OK`
+
+```json
+{
+  "anomalies": [
+    {
+      "category_name": "Food",
+      "current_amount": "8500.00",
+      "average_amount": "3000.00",
+      "deviation": 1.83
+    }
+  ],
+  "trends": [
+    {
+      "category_name": "Transport",
+      "trend": "increasing",
+      "last_30_days": "2000.00",
+      "previous_30_days": "1200.00"
+    }
+  ],
+  "top_categories": [
+    {"category_name": "Rent", "total": "12000.00", "percentage": 45.2}
+  ],
+  "total_income_30d": "60000.00",
+  "total_expense_30d": "26500.00"
+}
+```
+
+**Notes:** Anomalies are flagged when spending deviates >50% between 30-day windows. Trends compare the last 30 days vs the previous 30 days and are classified as `increasing`, `decreasing`, or `stable`.
+
+---
+
+### POST /ai/ocr
+
+Extract fields from a receipt image. Currently a mock/stub endpoint returning realistic sample data; ready for Google Vision or Tesseract integration.
+
+**Request Body:**
+
+```json
+{
+  "image_base64": "iVBORw0KGgo...",
+  "filename": "receipt.jpg"
+}
+```
+
+| Field        | Type   | Required | Notes                          |
+|--------------|--------|----------|--------------------------------|
+| image_base64 | string | Yes      | Base64-encoded image data      |
+| filename     | string | No       | Original filename              |
+
+**Response:** `200 OK`
+
+```json
+{
+  "merchant": "Sample Store",
+  "amount": "1250.00",
+  "date": "2026-02-18",
+  "items": [
+    {"name": "Item 1", "amount": "500.00"},
+    {"name": "Item 2", "amount": "750.00"}
+  ],
+  "raw_text": "SAMPLE STORE\nDate: 2026-02-18\n...",
+  "confidence": 0.85
+}
+```
+
+---
+
+### GET /health
+
+Health check endpoint. No authentication required.
+
+**Response:** `200 OK`
+
+```json
+{
+  "status": "ok",
+  "service": "ai"
+}
+```
+
+---
+
+## Sync Service (port 8008)
+
+All endpoints require `Authorization: Bearer <access_token>`.
+
+### POST /sync/push
+
+Upload local changes from a mobile device. Supports batch upload of transactions and ledger entries with last-write-wins conflict resolution (existing IDs are overwritten).
+
+**Request Body:**
+
+```json
+{
+  "device_id": "device-abc-123",
+  "transactions": [
+    {
+      "id": "uuid",
+      "account_id": "uuid",
+      "category_id": "uuid",
+      "type": "expense",
+      "amount": "150.00",
+      "description": "Grocery shopping",
+      "transaction_date": "2026-02-18T14:30:00Z"
+    }
+  ],
+  "ledger_entries": [
+    {
+      "id": "uuid",
+      "customer_id": "uuid",
+      "type": "debit",
+      "amount": "1500.00",
+      "description": "Goods on credit",
+      "due_date": "2026-03-01",
+      "is_settled": false
+    }
+  ]
+}
+```
+
+| Field          | Type  | Required | Notes                                         |
+|----------------|-------|----------|-----------------------------------------------|
+| device_id      | string| Yes      | Unique device identifier (1-255 chars)        |
+| transactions   | array | No       | Transactions to upsert (default: empty)       |
+| ledger_entries | array | No       | Ledger entries to upsert (default: empty)     |
+
+**Response:** `201 Created`
+
+```json
+{
+  "synced_transactions": 1,
+  "synced_ledger_entries": 1,
+  "sync_id": "uuid"
+}
+```
+
+---
+
+### GET /sync/pull
+
+Download server changes since a given timestamp. Returns all records if no `since` parameter is provided.
+
+**Query Parameters:**
+
+| Param     | Type     | Required | Notes                                   |
+|-----------|----------|----------|-----------------------------------------|
+| device_id | string   | Yes      | Device identifier                       |
+| since     | datetime | No       | Return changes after this timestamp     |
+
+**Response:** `200 OK`
+
+```json
+{
+  "transactions": [
+    {
+      "id": "uuid",
+      "account_id": "uuid",
+      "category_id": "uuid",
+      "type": "expense",
+      "amount": "150.00",
+      "description": "Grocery shopping",
+      "transaction_date": "2026-02-18T14:30:00Z",
+      "created_at": "2026-02-18T14:30:00Z",
+      "updated_at": "2026-02-18T14:30:00Z"
+    }
+  ],
+  "ledger_entries": [
+    {
+      "id": "uuid",
+      "customer_id": "uuid",
+      "type": "debit",
+      "amount": "1500.00",
+      "description": "Goods on credit",
+      "due_date": "2026-03-01",
+      "is_settled": false,
+      "created_at": "2026-02-18T10:00:00Z",
+      "updated_at": "2026-02-18T10:00:00Z"
+    }
+  ],
+  "sync_timestamp": "2026-02-18T15:00:00Z"
+}
+```
+
+---
+
+### GET /sync/status
+
+Get sync status for a device: last sync time and pending change count.
+
+**Query Parameters:**
+
+| Param     | Type   | Required | Notes              |
+|-----------|--------|----------|--------------------|
+| device_id | string | Yes      | Device identifier  |
+
+**Response:** `200 OK`
+
+```json
+{
+  "device_id": "device-abc-123",
+  "last_synced_at": "2026-02-18T15:00:00Z",
+  "sync_status": "completed",
+  "pending_transactions": 5,
+  "pending_ledger_entries": 2
+}
+```
+
+**Notes:** `pending_transactions` and `pending_ledger_entries` count records created or updated after the last sync time.
+
+---
+
+### GET /health
+
+Health check endpoint. No authentication required.
+
+**Response:** `200 OK`
+
+```json
+{
+  "status": "ok",
+  "service": "sync"
+}
+```
+
+---
+
 ## Error Responses
 
 All services return errors in a consistent format. Common status codes:
@@ -1313,5 +1593,92 @@ Returned by `GET /ledger/{customer_id}`, wraps the ledger entry list with balanc
   "skip": "integer",
   "limit": "integer",
   "unread_count": "integer"
+}
+```
+
+### CategorizeResponse
+
+```json
+{
+  "predictions": [
+    {
+      "category_id": "uuid | null",
+      "category_name": "string",
+      "confidence": "float (0.0-1.0)"
+    }
+  ]
+}
+```
+
+### InsightsResponse
+
+```json
+{
+  "anomalies": [
+    {
+      "category_name": "string",
+      "current_amount": "decimal (string)",
+      "average_amount": "decimal (string)",
+      "deviation": "float"
+    }
+  ],
+  "trends": [
+    {
+      "category_name": "string",
+      "trend": "increasing | decreasing | stable",
+      "last_30_days": "decimal (string)",
+      "previous_30_days": "decimal (string)"
+    }
+  ],
+  "top_categories": [
+    {"category_name": "string", "total": "decimal (string)", "percentage": "float"}
+  ],
+  "total_income_30d": "decimal (string)",
+  "total_expense_30d": "decimal (string)"
+}
+```
+
+### OcrResponse
+
+```json
+{
+  "merchant": "string",
+  "amount": "decimal (string)",
+  "date": "string (YYYY-MM-DD)",
+  "items": [{"name": "string", "amount": "decimal (string)"}],
+  "raw_text": "string",
+  "confidence": "float (0.0-1.0)"
+}
+```
+
+### PushResponse
+
+```json
+{
+  "synced_transactions": "integer",
+  "synced_ledger_entries": "integer",
+  "sync_id": "uuid"
+}
+```
+
+### PullResponse
+
+```json
+{
+  "transactions": "TransactionResponse[]",
+  "ledger_entries": "LedgerEntryResponse[]",
+  "sync_timestamp": "datetime (ISO 8601)"
+}
+```
+
+### SyncStatusResponse
+
+```json
+{
+  "device_id": "string",
+  "last_synced_at": "datetime (ISO 8601) | null",
+  "sync_status": "string",
+  "pending_transactions": "integer",
+  "pending_ledger_entries": "integer"
 }
 ```

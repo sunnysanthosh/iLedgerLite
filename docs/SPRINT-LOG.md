@@ -222,3 +222,51 @@ This document tracks all completed and in-progress sprints for the LedgerLite pr
 - MEMORY.md: updated with retro completion context
 
 **Tests:** 116 passing (no regressions — same count as Sprint 4)
+
+---
+
+## Sprint 5 — AI Service + Sync Service (Completed)
+
+**Goal:** AI-powered categorization/insights and offline sync capabilities.
+
+**Delivered:**
+
+### AI Service (port 8006, prefix AI_, Redis DB 5)
+- Rule-based keyword categorization with confidence scoring — maps transaction descriptions to 60+ keywords across 30+ categories
+- Spending insights with anomaly detection (>50% deviation flagged) and trend analysis (comparing 30-day windows)
+- Top category breakdown, income/expense totals
+- Mock OCR endpoint (stub returning realistic receipt data, ready for Google Vision/Tesseract integration)
+- Read-only copies of Transaction, Category, Account models for direct DB queries
+
+### Sync Service (port 8008, prefix SYNC_, Redis DB 7)
+- Push endpoint: batch upload of transactions and ledger entries from mobile devices with last-write-wins conflict resolution (upsert on existing IDs)
+- Pull endpoint: download server changes since a given timestamp (delta sync)
+- Status endpoint: last sync time, pending change count per device
+- SyncLog model tracks every push/pull operation per user+device
+- Added `sync_log` table to `database/schema.sql`
+
+**AI Service Endpoints:**
+
+| Method | Path            | Status | Description                                |
+|--------|-----------------|--------|--------------------------------------------|
+| POST   | /ai/categorize  | 200    | Predict category from description/amount   |
+| GET    | /ai/insights    | 200    | Spending anomalies, trends, top categories |
+| POST   | /ai/ocr         | 200    | Receipt OCR extraction (mock)              |
+
+**Sync Service Endpoints:**
+
+| Method | Path          | Status | Description                              |
+|--------|---------------|--------|------------------------------------------|
+| POST   | /sync/push    | 201    | Upload local changes (batch upsert)      |
+| GET    | /sync/pull    | 200    | Download changes since timestamp         |
+| GET    | /sync/status  | 200    | Last sync time + pending count           |
+
+**Tests:** 30 new (16 ai + 14 sync), total across all 8 services: **146**
+
+**Key Technical Decisions:**
+- Categorization uses keyword matching with confidence = (keyword_length / description_length) + 0.3, capped at 0.95
+- Insights anomaly detection threshold: 50% deviation between 30-day windows
+- Sync uses last-write-wins for conflict resolution — if a pushed transaction ID already exists, it's overwritten
+- Pull returns all changes since a timestamp, or all records if no timestamp given
+- SyncLog records every push/pull for audit and device tracking
+- Pydantic `@field_validator` on pull response schemas to convert `Decimal` → `str` for JSON serialization
