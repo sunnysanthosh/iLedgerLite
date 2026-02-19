@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 LedgerLite is an **early-stage fintech SaaS product**. Backend microservices are under active development. Planning documents (PRDs, investor briefs, architecture blueprints) are at the root level. See `ROADMAP.md` for implementation status.
 
-**Completed:** auth-service, user-service, transaction-service, ledger-service, report-service, notification-service, ai-service, sync-service, Alembic migrations, CI/CD (test + lint + build + deploy)
+**Completed:** auth-service, user-service, transaction-service, ledger-service, report-service, notification-service, ai-service, sync-service, Alembic migrations, CI/CD (test + lint + build + deploy), Flutter mobile app MVP (auth, dashboard, transactions, accounts)
 **In Progress:** —
-**Not Started:** Kubernetes manifests (6B); Terraform IaC (6C); mobile app; web dashboard
+**Not Started:** Kubernetes manifests (6B); Terraform IaC (6C); mobile ledger/reports/sync screens; web dashboard
 
 ## Build & Run Commands
 
