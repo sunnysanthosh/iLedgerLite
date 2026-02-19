@@ -1,0 +1,134 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ledgerlite-staging
+
+resources:
+  - ../../base
+
+patches:
+  # Override namespace resource to use staging name
+  - patch: |
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: ledgerlite
+      $patch: replace
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: ledgerlite-staging
+        labels:
+          app.kubernetes.io/part-of: ledgerlite
+          environment: staging
+
+  # Staging ingress host
+  - patch: |
+      - op: replace
+        path: /spec/rules/0/host
+        value: api.staging.ledgerlite.app
+    target:
+      kind: Ingress
+      name: ledgerlite-ingress
+
+  # Staging secrets (base64-encoded dev defaults — replace in real deployment)
+  - patch: |
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: ledgerlite-secrets
+      stringData:
+        JWT_SECRET: "staging-secret-change-me"
+        DATABASE_USER: "ledgerlite"
+        DATABASE_PASSWORD: "ledgerlite-staging"
+        DATABASE_URL: "postgresql+asyncpg://ledgerlite:ledgerlite-staging@postgres:5432/ledgerlite"
+
+  # Staging image tags
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: auth-service
+      spec:
+        template:
+          spec:
+            containers:
+              - name: auth-service
+                image: ghcr.io/sunnysans/ledgerlite/auth-service:staging
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: user-service
+      spec:
+        template:
+          spec:
+            containers:
+              - name: user-service
+                image: ghcr.io/sunnysans/ledgerlite/user-service:staging
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: transaction-service
+      spec:
+        template:
+          spec:
+            containers:
+              - name: transaction-service
+                image: ghcr.io/sunnysans/ledgerlite/transaction-service:staging
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: ledger-service
+      spec:
+        template:
+          spec:
+            containers:
+              - name: ledger-service
+                image: ghcr.io/sunnysans/ledgerlite/ledger-service:staging
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: report-service
+      spec:
+        template:
+          spec:
+            containers:
+              - name: report-service
+                image: ghcr.io/sunnysans/ledgerlite/report-service:staging
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: ai-service
+      spec:
+        template:
+          spec:
+            containers:
+              - name: ai-service
+                image: ghcr.io/sunnysans/ledgerlite/ai-service:staging
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: notification-service
+      spec:
+        template:
+          spec:
+            containers:
+              - name: notification-service
+                image: ghcr.io/sunnysans/ledgerlite/notification-service:staging
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: sync-service
+      spec:
+        template:
+          spec:
+            containers:
+              - name: sync-service
+                image: ghcr.io/sunnysans/ledgerlite/sync-service:staging

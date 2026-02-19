@@ -1,6 +1,6 @@
 # LedgerLite — Implementation Roadmap
 
-## Current State (as of Sprint 8)
+## Current State (as of Sprint 6B)
 
 | Component | Status |
 |-----------|--------|
@@ -22,7 +22,8 @@
 | **CLAUDE.md** | Done — coding conventions, testing patterns, CI/CD, branching strategy |
 | **apps/mobile-app** | Done — Flutter (auth, dashboard, transactions, accounts, ledger, reports, settings, offline sync) — 43 Dart files |
 | **apps/web-dashboard** | Empty (.gitkeep) |
-| **infrastructure/k8s, terraform** | Empty (.gitkeep) — deferred to 6B/6C |
+| **infrastructure/kubernetes** | Done — Kustomize base + staging/production overlays (23 manifests) |
+| **infrastructure/terraform** | Empty (.gitkeep) — deferred to 6C |
 
 **Total: 146 tests passing across 8 services**
 **All backend microservices complete. Flutter mobile app feature-complete (Sprint 8).**
@@ -173,13 +174,17 @@
 - [x] Generate initial migration from `schema.sql` (10 tables, all indexes, check constraints)
 - [x] Add seed data migration (29 system categories — 8 income + 21 expense)
 
-### 6B. Kubernetes Manifests (`infrastructure/kubernetes/`) — DEFERRED
-- [ ] Deployment + Service YAML per microservice
-- [ ] ConfigMap for shared env vars
-- [ ] Secrets for JWT_SECRET, DB passwords
-- [ ] Ingress controller config (nginx/traefik)
-- [ ] PostgreSQL StatefulSet (or managed DB reference)
-- [ ] Redis Deployment
+### 6B. Kubernetes Manifests (`infrastructure/kubernetes/`) — DONE
+- [x] Kustomize base + overlays (staging/production)
+- [x] Deployment + Service YAML per microservice (8 services)
+- [x] ConfigMap for JWT_ALGORITHM
+- [x] Secret for JWT_SECRET, DB credentials, DATABASE_URL
+- [x] nginx-ingress with 12 path-based routing rules
+- [x] PostgreSQL 16 StatefulSet with 5Gi PVC and health probes
+- [x] Redis 7 Deployment with AOF persistence and health probes
+- [x] Alembic migrations Job + Dockerfile (`database/Dockerfile`)
+- [x] Staging overlay: ledgerlite-staging namespace, staging image tags, staging secrets
+- [x] Production overlay: ledgerlite-production namespace, 2 replicas per service, production image tags
 
 ### 6C. Terraform (`infrastructure/terraform/`) — DEFERRED
 - [ ] VPC, subnets, security groups
@@ -354,4 +359,4 @@
 
 ## Recommended Next Step
 
-**Sprint 8 is complete.** Next options: complete Sprint 6B/6C (Kubernetes + Terraform) for production infrastructure, or start Post-MVP Phase 2 features (OTP login, bank SMS parsing, UPI integration, multi-language).
+**Sprint 6B is complete.** Next options: complete Sprint 6C (Terraform IaC) for cloud provisioning, or start Post-MVP Phase 2 features (OTP login, bank SMS parsing, UPI integration, multi-language), or build the web dashboard.

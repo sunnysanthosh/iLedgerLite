@@ -1,0 +1,137 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ledgerlite-production
+
+resources:
+  - ../../base
+
+patches:
+  # Override namespace resource to use production name
+  - patch: |
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: ledgerlite
+      $patch: replace
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: ledgerlite-production
+        labels:
+          app.kubernetes.io/part-of: ledgerlite
+          environment: production
+
+  # Production: 2 replicas per microservice
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: not-used
+      spec:
+        replicas: 2
+    target:
+      kind: Deployment
+      labelSelector: app.kubernetes.io/component=backend
+
+  # Production secrets (placeholder — replace with sealed-secrets or external-secrets in real deployment)
+  - patch: |
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: ledgerlite-secrets
+      stringData:
+        JWT_SECRET: "REPLACE_WITH_PRODUCTION_SECRET"
+        DATABASE_USER: "ledgerlite"
+        DATABASE_PASSWORD: "REPLACE_WITH_PRODUCTION_PASSWORD"
+        DATABASE_URL: "postgresql+asyncpg://ledgerlite:REPLACE_WITH_PRODUCTION_PASSWORD@postgres:5432/ledgerlite"
+
+  # Production image tags
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: auth-service
+      spec:
+        template:
+          spec:
+            containers:
+              - name: auth-service
+                image: ghcr.io/sunnysans/ledgerlite/auth-service:production
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: user-service
+      spec:
+        template:
+          spec:
+            containers:
+              - name: user-service
+                image: ghcr.io/sunnysans/ledgerlite/user-service:production
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: transaction-service
+      spec:
+        template:
+          spec:
+            containers:
+              - name: transaction-service
+                image: ghcr.io/sunnysans/ledgerlite/transaction-service:production
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: ledger-service
+      spec:
+        template:
+          spec:
+            containers:
+              - name: ledger-service
+                image: ghcr.io/sunnysans/ledgerlite/ledger-service:production
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: report-service
+      spec:
+        template:
+          spec:
+            containers:
+              - name: report-service
+                image: ghcr.io/sunnysans/ledgerlite/report-service:production
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: ai-service
+      spec:
+        template:
+          spec:
+            containers:
+              - name: ai-service
+                image: ghcr.io/sunnysans/ledgerlite/ai-service:production
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: notification-service
+      spec:
+        template:
+          spec:
+            containers:
+              - name: notification-service
+                image: ghcr.io/sunnysans/ledgerlite/notification-service:production
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: sync-service
+      spec:
+        template:
+          spec:
+            containers:
+              - name: sync-service
+                image: ghcr.io/sunnysans/ledgerlite/sync-service:production

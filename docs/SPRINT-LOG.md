@@ -452,3 +452,71 @@ alembic history
 - Local SQLite schema mirrors backend tables with added `synced` boolean flag
 - Settings screen doubles as sync control panel — user can trigger manual sync and see pending changes
 - PieChart shows percentage labels only for slices ≥5% to avoid text overlap
+
+---
+
+## Sprint 6B — Kubernetes Manifests (Completed)
+
+**Goal:** Production-grade Kubernetes manifests using Kustomize (base + overlays) for deploying all 8 microservices to any K8s cluster.
+
+**Delivered:**
+
+### Kustomize Structure (`infrastructure/kubernetes/`)
+- **Base** (17 resource files): canonical resource definitions for all components
+- **Staging overlay**: `ledgerlite-staging` namespace, `:staging` image tags, staging secrets
+- **Production overlay**: `ledgerlite-production` namespace, `:production` image tags, 2 replicas per microservice
+
+### Base Resources
+- **Namespace** — `ledgerlite` (overridden per overlay)
+- **ConfigMap** — `JWT_ALGORITHM=HS256`
+- **Secret** — `JWT_SECRET`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_URL` (dev defaults, replaced per overlay)
+- **PostgreSQL StatefulSet** — Postgres 16-alpine, 5Gi PVC, `pg_isready` liveness/readiness probes
+- **Redis Deployment** — Redis 7-alpine with AOF persistence, `redis-cli ping` probes
+- **Migrations Job** — runs `alembic upgrade head` using `database/Dockerfile` image
+- **8 Service Deployments + Services** — one per microservice, each with:
+  - Service-prefixed env vars (`AUTH_`, `USER_`, `TXN_`, `LEDGER_`, `REPORT_`, `AI_`, `NOTIFICATION_`, `SYNC_`)
+  - Dedicated Redis DB (0-7)
+  - `/health` liveness and readiness probes
+  - Resource limits: 50m/200m CPU, 64Mi/256Mi memory
+- **Ingress** — nginx-ingress with 12 path-based routing rules (regex rewrite)
+
+### Ingress Routing
+
+| Path | Backend |
+|------|---------|
+| `/api/auth/*` | auth-service:8000 |
+| `/api/users/*` | user-service:8000 |
+| `/api/transactions/*` | transaction-service:8000 |
+| `/api/accounts/*` | transaction-service:8000 |
+| `/api/categories/*` | transaction-service:8000 |
+| `/api/customers/*` | ledger-service:8000 |
+| `/api/ledger-entry/*` | ledger-service:8000 |
+| `/api/ledger/*` | ledger-service:8000 |
+| `/api/reports/*` | report-service:8000 |
+| `/api/ai/*` | ai-service:8000 |
+| `/api/notifications/*` | notification-service:8000 |
+| `/api/sync/*` | sync-service:8000 |
+
+### Overlay Differences
+
+| Aspect | Staging | Production |
+|--------|---------|------------|
+| Namespace | `ledgerlite-staging` | `ledgerlite-production` |
+| Replicas per service | 1 | 2 |
+| Image tag | `:staging` | `:production` |
+| Ingress host | `api.staging.ledgerlite.app` | `api.ledgerlite.app` |
+| Secrets | Staging defaults | Placeholder (replace with sealed-secrets) |
+
+### Also Delivered
+- `database/Dockerfile` — lightweight Python 3.12 image for running Alembic migrations in K8s
+
+**File Count:** 23 YAML files + 1 Dockerfile
+
+**Validation:** `kubectl kustomize` renders correctly for both staging and production overlays (25 resources each: 1 NS + 1 CM + 1 Secret + 1 StatefulSet + 9 Deployments + 10 Services + 1 Ingress + 1 Job)
+
+**Key Decisions:**
+- Kustomize over Helm — built into kubectl, no extra tooling, simpler for straightforward overlays
+- All services use internal port 8000 (uvicorn default) — no port mapping needed
+- PostgreSQL StatefulSet included for dev/staging self-containment; production can swap to managed RDS/CloudSQL
+- Migrations run as a standalone Job (manual apply before deployments), not auto-run on every `kubectl apply`
+- Secrets use `stringData` (not base64) for readability; production should use sealed-secrets or external-secrets-operator

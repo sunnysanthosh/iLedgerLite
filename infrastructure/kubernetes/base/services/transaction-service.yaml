@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transaction-service
+  labels:
+    app.kubernetes.io/name: transaction-service
+    app.kubernetes.io/component: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: transaction-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: transaction-service
+        app.kubernetes.io/component: backend
+    spec:
+      containers:
+        - name: transaction-service
+          image: ghcr.io/sunnysans/ledgerlite/transaction-service:latest
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: TXN_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ledgerlite-secrets
+                  key: DATABASE_URL
+            - name: TXN_REDIS_URL
+              value: redis://redis:6379/2
+            - name: TXN_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ledgerlite-secrets
+                  key: JWT_SECRET
+            - name: TXN_JWT_ALGORITHM
+              valueFrom:
+                configMapKeyRef:
+                  name: ledgerlite-config
+                  key: JWT_ALGORITHM
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: transaction-service
+  labels:
+    app.kubernetes.io/name: transaction-service
+    app.kubernetes.io/component: backend
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8000
+      targetPort: 8000
+      name: http
+  selector:
+    app.kubernetes.io/name: transaction-service

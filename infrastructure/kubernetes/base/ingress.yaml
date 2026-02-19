@@ -1,0 +1,100 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ledgerlite-ingress
+  labels:
+    app.kubernetes.io/name: ledgerlite-ingress
+    app.kubernetes.io/component: networking
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$1$2
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: api.ledgerlite.app
+      http:
+        paths:
+          - path: /api/auth(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: auth-service
+                port:
+                  number: 8000
+          - path: /api/users(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: user-service
+                port:
+                  number: 8000
+          - path: /api/transactions(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: transaction-service
+                port:
+                  number: 8000
+          - path: /api/accounts(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: transaction-service
+                port:
+                  number: 8000
+          - path: /api/categories(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: transaction-service
+                port:
+                  number: 8000
+          - path: /api/customers(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: ledger-service
+                port:
+                  number: 8000
+          - path: /api/ledger-entry(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: ledger-service
+                port:
+                  number: 8000
+          - path: /api/ledger(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: ledger-service
+                port:
+                  number: 8000
+          - path: /api/reports(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: report-service
+                port:
+                  number: 8000
+          - path: /api/ai(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: ai-service
+                port:
+                  number: 8000
+          - path: /api/notifications(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: notification-service
+                port:
+                  number: 8000
+          - path: /api/sync(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: sync-service
+                port:
+                  number: 8000
