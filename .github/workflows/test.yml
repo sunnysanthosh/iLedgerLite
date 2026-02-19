@@ -16,6 +16,8 @@ jobs:
       ledger: ${{ steps.filter.outputs.ledger }}
       report: ${{ steps.filter.outputs.report }}
       notification: ${{ steps.filter.outputs.notification }}
+      ai: ${{ steps.filter.outputs.ai }}
+      sync: ${{ steps.filter.outputs.sync }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -36,6 +38,10 @@ jobs:
             notification:
               - 'services/notification-service/**'
               - 'shared/**'
+            ai:
+              - 'services/ai-service/**'
+            sync:
+              - 'services/sync-service/**'
 
   test:
     needs: detect-changes
@@ -56,6 +62,10 @@ jobs:
             enabled: ${{ needs.detect-changes.outputs.report }}
           - service: notification-service
             enabled: ${{ needs.detect-changes.outputs.notification }}
+          - service: ai-service
+            enabled: ${{ needs.detect-changes.outputs.ai }}
+          - service: sync-service
+            enabled: ${{ needs.detect-changes.outputs.sync }}
     steps:
       - uses: actions/checkout@v4
         if: matrix.enabled == 'true'

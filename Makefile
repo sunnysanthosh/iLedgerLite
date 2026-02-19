@@ -1,6 +1,6 @@
-SERVICES := auth-service user-service transaction-service ledger-service report-service notification-service
+SERVICES := auth-service user-service transaction-service ledger-service report-service notification-service ai-service sync-service
 
-.PHONY: test-all test-auth test-user test-transaction test-ledger test-report test-notification lint format
+.PHONY: test-all test-auth test-user test-transaction test-ledger test-report test-notification test-ai test-sync lint format
 
 test-all:
 	@for svc in $(SERVICES); do \
@@ -25,6 +25,12 @@ test-report:
 
 test-notification:
 	cd services/notification-service && python -m pytest tests/ -v
+
+test-ai:
+	cd services/ai-service && python -m pytest tests/ -v
+
+test-sync:
+	cd services/sync-service && python -m pytest tests/ -v
 
 lint:
 	ruff check services/

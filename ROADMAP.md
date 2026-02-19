@@ -1,6 +1,6 @@
 # LedgerLite — Implementation Roadmap
 
-## Current State (as of Retro 4.5 completion)
+## Current State (as of Sprint 5 completion)
 
 | Component | Status |
 |-----------|--------|
@@ -10,21 +10,22 @@
 | **ledger-service** | Done — 7 endpoints, 26 tests |
 | **report-service** | Done — 5 endpoints, 18 tests |
 | **notification-service** | Done — 3 endpoints, 12 tests |
-| **ai-service/sync-service** | Bare skeletons (health endpoint only) |
-| **database/schema.sql** | Done — 9 tables, indexes |
+| **ai-service** | Done — 3 endpoints, 16 tests |
+| **sync-service** | Done — 3 endpoints, 14 tests |
+| **database/schema.sql** | Done — 10 tables (added sync_log), indexes |
 | **database/seeds/** | Done — 29 system categories |
 | **docker-compose.yml** | Done — prefixed env vars, JWT_SECRET, correct Redis DBs |
 | **CI/CD** | Done — GitHub Actions (test + lint), Makefile, pyproject.toml |
 | **docs/** | Done — API.md, SPRINT-LOG.md |
 | **shared/** | Done — base settings, pagination, auth utilities |
-| **CLAUDE.md** | Done — coding conventions, testing patterns, CI/CD section |
+| **CLAUDE.md** | Done — coding conventions, testing patterns, CI/CD, branching strategy |
 | **apps/mobile-app** | Empty (.gitkeep) |
 | **apps/web-dashboard** | Empty (.gitkeep) |
 | **infrastructure/k8s, terraform** | Empty (.gitkeep) |
 | **database/migrations** | Not started |
 
-**Total: 116 tests passing across 6 services**
-**UUID migration: all 16 model files now use `sqlalchemy.Uuid` (cross-dialect)**
+**Total: 146 tests passing across 8 services**
+**All backend microservices complete.**
 
 ---
 
@@ -345,4 +346,4 @@
 
 ## Recommended Next Step
 
-**Start Sprint 5 → Sync Service + AI Service**, to deliver offline sync capabilities and AI-powered categorization/insights.
+**Start Sprint 6 → Database Migrations + Infrastructure**, to establish Alembic migrations, Kubernetes manifests, Terraform IaC, and CI/CD build/deploy pipelines for production readiness.

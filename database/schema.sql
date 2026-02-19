@@ -102,6 +102,17 @@ CREATE TABLE notifications (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+CREATE TABLE sync_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    device_id VARCHAR(255) NOT NULL,
+    last_synced_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    sync_status VARCHAR(20) NOT NULL DEFAULT 'completed' CHECK (sync_status IN ('pending', 'in_progress', 'completed', 'failed')),
+    changes_pushed INTEGER DEFAULT 0,
+    changes_pulled INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Indexes
 CREATE INDEX idx_transactions_user_id ON transactions(user_id);
 CREATE INDEX idx_transactions_account_id ON transactions(account_id);
@@ -111,3 +122,4 @@ CREATE INDEX idx_ledger_entries_customer_id ON ledger_entries(customer_id);
 CREATE INDEX idx_accounts_user_id ON accounts(user_id);
 CREATE INDEX idx_user_settings_user_id ON user_settings(user_id);
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX idx_sync_log_user_device ON sync_log(user_id, device_id);
