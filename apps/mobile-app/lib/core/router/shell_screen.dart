@@ -9,8 +9,11 @@ class ShellScreen extends StatelessWidget {
   int _currentIndex(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
     if (location.startsWith('/dashboard')) return 0;
-    if (location.startsWith('/transactions')) return 1;
-    if (location.startsWith('/accounts')) return 2;
+    if (location.startsWith('/transactions') ||
+        location.startsWith('/accounts')) return 1;
+    if (location.startsWith('/ledger')) return 2;
+    if (location.startsWith('/reports')) return 3;
+    if (location.startsWith('/settings')) return 4;
     return 0;
   }
 
@@ -27,14 +30,18 @@ class ShellScreen extends StatelessWidget {
             case 1:
               context.go('/transactions');
             case 2:
-              context.go('/accounts');
+              context.go('/ledger');
+            case 3:
+              context.go('/reports');
+            case 4:
+              context.go('/settings');
           }
         },
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
             selectedIcon: Icon(Icons.dashboard),
-            label: 'Dashboard',
+            label: 'Home',
           ),
           NavigationDestination(
             icon: Icon(Icons.receipt_long_outlined),
@@ -42,9 +49,19 @@ class ShellScreen extends StatelessWidget {
             label: 'Transactions',
           ),
           NavigationDestination(
-            icon: Icon(Icons.account_balance_wallet_outlined),
-            selectedIcon: Icon(Icons.account_balance_wallet),
-            label: 'Accounts',
+            icon: Icon(Icons.people_outlined),
+            selectedIcon: Icon(Icons.people),
+            label: 'Ledger',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.bar_chart_outlined),
+            selectedIcon: Icon(Icons.bar_chart),
+            label: 'Reports',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings),
+            label: 'Settings',
           ),
         ],
       ),

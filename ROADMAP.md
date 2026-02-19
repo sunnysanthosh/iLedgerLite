@@ -1,6 +1,6 @@
 # LedgerLite — Implementation Roadmap
 
-## Current State (as of Sprint 7)
+## Current State (as of Sprint 8)
 
 | Component | Status |
 |-----------|--------|
@@ -20,12 +20,12 @@
 | **docs/** | Done — API.md, SPRINT-LOG.md |
 | **shared/** | Done — base settings, pagination, auth utilities |
 | **CLAUDE.md** | Done — coding conventions, testing patterns, CI/CD, branching strategy |
-| **apps/mobile-app** | Done — Flutter MVP (auth, dashboard, transactions, accounts) — 28 Dart files |
+| **apps/mobile-app** | Done — Flutter (auth, dashboard, transactions, accounts, ledger, reports, settings, offline sync) — 43 Dart files |
 | **apps/web-dashboard** | Empty (.gitkeep) |
 | **infrastructure/k8s, terraform** | Empty (.gitkeep) — deferred to 6B/6C |
 
 **Total: 146 tests passing across 8 services**
-**All backend microservices complete.**
+**All backend microservices complete. Flutter mobile app feature-complete (Sprint 8).**
 
 ---
 
@@ -231,31 +231,39 @@
 
 ---
 
-## Sprint 8 — Mobile Ledger + Reports + Offline Sync
+## Sprint 8 — Mobile Ledger + Reports + Offline Sync (DONE)
 
 > **Goal:** Business ledger on mobile, report viewing, and offline capability.
 
-### 8A. Business Ledger Screens
-- [ ] Customer list with search + outstanding balance
-- [ ] Customer detail with credit history timeline
-- [ ] Add ledger entry form
-- [ ] Mark payment (full/partial settle)
+### 8A. Business Ledger Screens — DONE
+- [x] Customer list with search + outstanding balance
+- [x] Customer detail with credit history timeline
+- [x] Add ledger entry form (debit/credit with due date)
+- [x] Mark payment — full settle and partial payment (settle dialog with amount input + validation)
+- [x] Add customer form (name, phone, email, address)
 
-### 8B. Reports Screens
-- [ ] Monthly spending breakdown (chart)
-- [ ] P&L view (business mode)
-- [ ] Export button (triggers PDF download)
+### 8B. Reports Screens — DONE
+- [x] Monthly spending breakdown (fl_chart PieChart with color legend)
+- [x] P&L view with Personal/Business mode toggle (revenue/income, expenses, net profit)
+- [x] Date range picker bar (custom range or all-time)
+- [x] Export with format picker (CSV or PDF)
+- [x] Category list with transaction counts
 
-### 8C. Offline Sync
-- [ ] Local SQLite mirror of transactions/ledger
-- [ ] Background sync worker
-- [ ] Sync status indicator in UI
-- [ ] Conflict resolution UX (if applicable)
+### 8C. Offline Sync — DONE
+- [x] Local SQLite mirror of transactions/ledger (sqflite)
+- [x] Background sync worker (push/pull cycle, periodic timer)
+- [x] Sync status indicator in settings UI
+- [x] Last-write-wins conflict resolution
 
-### 8D. Settings Screen
-- [ ] Profile editing
-- [ ] Notification preferences
-- [ ] Language & currency selection
+### 8D. Settings Screen — DONE
+- [x] Profile section with avatar initials, name, email, phone
+- [x] Profile edit bottom sheet (full name, phone, business name) with save
+- [x] Sync status with manual sync trigger
+- [x] Currency picker (INR, USD, EUR, GBP) — reads current from profile
+- [x] Language picker (English, Hindi, Tamil, Telugu) — reads current from profile
+- [x] Notification preferences (push + email toggles) — reads live values from profile
+- [x] Logout with confirmation dialog
+- [x] Updated bottom nav to 5 tabs (Home, Transactions, Ledger, Reports, Settings)
 
 ---
 
@@ -346,4 +354,4 @@
 
 ## Recommended Next Step
 
-**Start Sprint 8 → Mobile Ledger + Reports + Offline Sync**, to add business ledger screens, report viewing, offline sync, and settings. Alternatively, complete Sprint 6B/6C (Kubernetes + Terraform) for full production infrastructure.
+**Sprint 8 is complete.** Next options: complete Sprint 6B/6C (Kubernetes + Terraform) for production infrastructure, or start Post-MVP Phase 2 features (OTP login, bank SMS parsing, UPI integration, multi-language).

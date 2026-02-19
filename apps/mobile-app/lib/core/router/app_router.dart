@@ -10,6 +10,12 @@ import '../../features/transactions/screens/add_transaction_screen.dart';
 import '../../features/transactions/screens/transaction_list_screen.dart';
 import '../../features/accounts/screens/account_list_screen.dart';
 import '../../features/accounts/screens/add_account_screen.dart';
+import '../../features/ledger/screens/customer_list_screen.dart';
+import '../../features/ledger/screens/customer_detail_screen.dart';
+import '../../features/ledger/screens/add_customer_screen.dart';
+import '../../features/ledger/screens/add_ledger_entry_screen.dart';
+import '../../features/reports/screens/reports_screen.dart';
+import '../../features/settings/screens/settings_screen.dart';
 import 'shell_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -57,6 +63,41 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/accounts/add',
             builder: (context, state) => const AddAccountScreen(),
+          ),
+          GoRoute(
+            path: '/ledger',
+            builder: (context, state) => const CustomerListScreen(),
+          ),
+          GoRoute(
+            path: '/ledger/add-customer',
+            builder: (context, state) => const AddCustomerScreen(),
+          ),
+          GoRoute(
+            path: '/ledger/customer/:id',
+            builder: (context, state) {
+              final customerId = state.pathParameters['id']!;
+              return CustomerDetailScreen(customerId: customerId);
+            },
+          ),
+          GoRoute(
+            path: '/ledger/customer/:id/add-entry',
+            builder: (context, state) {
+              final customerId = state.pathParameters['id']!;
+              final type =
+                  state.uri.queryParameters['type'] ?? 'debit';
+              return AddLedgerEntryScreen(
+                customerId: customerId,
+                initialType: type,
+              );
+            },
+          ),
+          GoRoute(
+            path: '/reports',
+            builder: (context, state) => const ReportsScreen(),
+          ),
+          GoRoute(
+            path: '/settings',
+            builder: (context, state) => const SettingsScreen(),
           ),
         ],
       ),

@@ -401,3 +401,54 @@ alembic history
 - Auth interceptor handles token refresh transparently — no auth logic in feature code
 - Category dropdown dynamically filters by selected transaction type
 - All monetary amounts displayed as formatted strings with currency symbols
+
+---
+
+## Sprint 8 — Mobile Ledger + Reports + Offline Sync (Completed)
+
+**Goal:** Business ledger on mobile, report viewing, offline sync, and settings.
+
+**Delivered:**
+
+### 8A. Business Ledger Screens (4 screens)
+- **Customer list** with real-time search, outstanding balance per customer, color-coded warning indicators for unpaid debts
+- **Customer detail** with balance summary card (total owed/paid/outstanding), debit/credit action buttons, ledger entry timeline with chronological history
+- **Add customer form** with name, phone, email, address fields
+- **Add ledger entry form** with segmented debit/credit selector, amount with INR prefix, description, due date picker (debit only)
+- Settlement: full or partial payment via settle dialog with amount input (full settle or enter partial payment amount with validation)
+
+### 8B. Reports Screens (1 screen + 1 widget)
+- **Reports screen** with P&L card (income/revenue, expenses, net profit), spending-by-category pie chart, category list with transaction counts
+- **Date range picker** bar — filter all reports by custom date range, clear to reset to all-time
+- **Report mode toggle** — Personal/Business segmented button; Business mode shows "Revenue" label and business icon
+- **Export** with format picker bottom sheet — CSV or PDF export with date range pass-through
+- **SpendingChart widget** using `fl_chart` PieChart with 8-color palette and legend (shows up to 6 categories in legend)
+- Pull-to-refresh on all report data
+
+### 8C. Offline Sync (2 core files)
+- **LocalDatabase** (`core/sync/local_database.dart`) — sqflite-backed local SQLite with 4 tables: transactions, ledger_entries, customers, sync_meta. Tracks sync status per record with `synced` flag.
+- **SyncService** (`core/sync/sync_service.dart`) — push-then-pull sync cycle with periodic timer (5-minute interval). Pushes unsynced local changes, pulls remote changes since last sync time. Exposes sync status as a stream for the UI.
+- Sync status stream: idle → syncing → done/error, with pending count and last sync time
+
+### 8D. Settings Screen
+- **Profile section** with avatar initials, name, email, phone. **Edit button** opens bottom sheet form (full name, phone, business name) with save/loading state.
+- **Sync status** with live state indicator (syncing/error/done), pending count, last sync time, manual sync trigger
+- **Preferences**: currency picker (INR/USD/EUR/GBP with check mark on current), language picker (English/Hindi/Tamil/Telugu with check mark on current) — both read current values from user profile settings
+- **Notifications**: push and email toggles read live values from profile (not hardcoded), persisted via updateSettings API
+- **Logout** with confirmation dialog
+- App version footer
+
+### Router & Navigation Updates
+- Bottom navigation expanded from 3 to 5 tabs: Home, Transactions, Ledger, Reports, Settings
+- 6 new routes: `/ledger`, `/ledger/add-customer`, `/ledger/customer/:id`, `/ledger/customer/:id/add-entry`, `/reports`, `/settings`
+- Transactions and Accounts grouped under single "Transactions" tab
+- `syncBase` constant added to ApiConstants (port 8008)
+
+**File Count:** 43 Dart files total (15 new: 6 ledger, 4 reports, 3 settings, 2 sync)
+
+**Key Decisions:**
+- 5-tab bottom nav keeps all major features one tap away
+- Sync uses push-then-pull pattern with last-write-wins conflict resolution (mirrors backend sync-service)
+- Local SQLite schema mirrors backend tables with added `synced` boolean flag
+- Settings screen doubles as sync control panel — user can trigger manual sync and see pending changes
+- PieChart shows percentage labels only for slices ≥5% to avoid text overlap

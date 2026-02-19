@@ -119,4 +119,90 @@ class ApiClient {
   // --- Reports ---
   Future<Response> getDashboardSummary() =>
       _dio.get('${ApiConstants.reportBase}/reports/summary');
+
+  Future<Response> getProfitLoss({String? startDate, String? endDate}) =>
+      _dio.get('${ApiConstants.reportBase}/reports/profit-loss',
+          queryParameters: {
+            if (startDate != null) 'start_date': startDate,
+            if (endDate != null) 'end_date': endDate,
+          });
+
+  Future<Response> getCashflow(
+          {String? startDate, String? endDate, String period = 'monthly'}) =>
+      _dio.get('${ApiConstants.reportBase}/reports/cashflow',
+          queryParameters: {
+            if (startDate != null) 'start_date': startDate,
+            if (endDate != null) 'end_date': endDate,
+            'period': period,
+          });
+
+  Future<Response> getBudget({String? startDate, String? endDate}) =>
+      _dio.get('${ApiConstants.reportBase}/reports/budget',
+          queryParameters: {
+            if (startDate != null) 'start_date': startDate,
+            if (endDate != null) 'end_date': endDate,
+          });
+
+  Future<Response> exportTransactions(
+          {String? startDate, String? endDate, String format = 'csv'}) =>
+      _dio.get('${ApiConstants.reportBase}/reports/export',
+          queryParameters: {
+            if (startDate != null) 'start_date': startDate,
+            if (endDate != null) 'end_date': endDate,
+            'format': format,
+          });
+
+  // --- Customers ---
+  Future<Response> getCustomers({String? search, int skip = 0, int limit = 20}) =>
+      _dio.get('${ApiConstants.ledgerBase}/customers', queryParameters: {
+        if (search != null && search.isNotEmpty) 'search': search,
+        'skip': skip,
+        'limit': limit,
+      });
+
+  Future<Response> getCustomer(String id) =>
+      _dio.get('${ApiConstants.ledgerBase}/customers/$id');
+
+  Future<Response> createCustomer(Map<String, dynamic> data) =>
+      _dio.post('${ApiConstants.ledgerBase}/customers', data: data);
+
+  Future<Response> updateCustomer(String id, Map<String, dynamic> data) =>
+      _dio.put('${ApiConstants.ledgerBase}/customers/$id', data: data);
+
+  // --- Ledger Entries ---
+  Future<Response> createLedgerEntry(Map<String, dynamic> data) =>
+      _dio.post('${ApiConstants.ledgerBase}/ledger-entry', data: data);
+
+  Future<Response> getLedgerHistory(String customerId,
+          {int skip = 0, int limit = 20}) =>
+      _dio.get('${ApiConstants.ledgerBase}/ledger/$customerId',
+          queryParameters: {'skip': skip, 'limit': limit});
+
+  Future<Response> settleLedgerEntry(
+          String id, Map<String, dynamic> data) =>
+      _dio.put('${ApiConstants.ledgerBase}/ledger-entry/$id', data: data);
+
+  // --- User Profile ---
+  Future<Response> getUserProfile() =>
+      _dio.get('${ApiConstants.userBase}/users/me');
+
+  Future<Response> updateUserProfile(Map<String, dynamic> data) =>
+      _dio.put('${ApiConstants.userBase}/users/me', data: data);
+
+  Future<Response> updateUserSettings(Map<String, dynamic> data) =>
+      _dio.put('${ApiConstants.userBase}/users/me/settings', data: data);
+
+  // --- Sync ---
+  Future<Response> syncPush(Map<String, dynamic> data) =>
+      _dio.post('${ApiConstants.syncBase}/sync/push', data: data);
+
+  Future<Response> syncPull(String deviceId, {String? since}) =>
+      _dio.get('${ApiConstants.syncBase}/sync/pull', queryParameters: {
+        'device_id': deviceId,
+        if (since != null) 'since': since,
+      });
+
+  Future<Response> syncStatus(String deviceId) =>
+      _dio.get('${ApiConstants.syncBase}/sync/status',
+          queryParameters: {'device_id': deviceId});
 }

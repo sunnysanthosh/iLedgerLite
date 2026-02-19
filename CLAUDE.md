@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 LedgerLite is an **early-stage fintech SaaS product**. Backend microservices are under active development. Planning documents (PRDs, investor briefs, architecture blueprints) are at the root level. See `ROADMAP.md` for implementation status.
 
-**Completed:** auth-service, user-service, transaction-service, ledger-service, report-service, notification-service, ai-service, sync-service, Alembic migrations, CI/CD (test + lint + build + deploy), Flutter mobile app MVP (auth, dashboard, transactions, accounts)
+**Completed:** auth-service, user-service, transaction-service, ledger-service, report-service, notification-service, ai-service, sync-service, Alembic migrations, CI/CD (test + lint + build + deploy), Flutter mobile app (auth, dashboard, transactions, accounts, ledger, reports, settings, offline sync — 43 Dart files)
 **In Progress:** —
-**Not Started:** Kubernetes manifests (6B); Terraform IaC (6C); mobile ledger/reports/sync screens; web dashboard
+**Not Started:** Kubernetes manifests (6B); Terraform IaC (6C); web dashboard
 
 ## Build & Run Commands
 
@@ -53,7 +53,7 @@ Service ports (via Docker Compose): auth=8001, user=8002, transaction=8003, ledg
 
 **Monorepo layout:**
 ```
-apps/mobile-app/              # Flutter (not yet scaffolded)
+apps/mobile-app/              # Flutter mobile app (43 Dart files)
 apps/web-dashboard/           # Next.js (not yet scaffolded)
 services/<name>-service/      # FastAPI microservices
   routers/                    # API route handlers

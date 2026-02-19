@@ -27,4 +27,9 @@ class ApiConstants {
     'REPORT_BASE_URL',
     defaultValue: 'http://10.0.2.2:8005',
   );
+
+  static const String syncBase = String.fromEnvironment(
+    'SYNC_BASE_URL',
+    defaultValue: 'http://10.0.2.2:8008',
+  );
 }
