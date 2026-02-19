@@ -1,0 +1,77 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      auth: ${{ steps.filter.outputs.auth }}
+      user: ${{ steps.filter.outputs.user }}
+      transaction: ${{ steps.filter.outputs.transaction }}
+      ledger: ${{ steps.filter.outputs.ledger }}
+      report: ${{ steps.filter.outputs.report }}
+      notification: ${{ steps.filter.outputs.notification }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            auth:
+              - 'services/auth-service/**'
+            user:
+              - 'services/user-service/**'
+            transaction:
+              - 'services/transaction-service/**'
+            ledger:
+              - 'services/ledger-service/**'
+            report:
+              - 'services/report-service/**'
+              - 'shared/**'
+            notification:
+              - 'services/notification-service/**'
+              - 'shared/**'
+
+  test:
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: auth-service
+            enabled: ${{ needs.detect-changes.outputs.auth }}
+          - service: user-service
+            enabled: ${{ needs.detect-changes.outputs.user }}
+          - service: transaction-service
+            enabled: ${{ needs.detect-changes.outputs.transaction }}
+          - service: ledger-service
+            enabled: ${{ needs.detect-changes.outputs.ledger }}
+          - service: report-service
+            enabled: ${{ needs.detect-changes.outputs.report }}
+          - service: notification-service
+            enabled: ${{ needs.detect-changes.outputs.notification }}
+    steps:
+      - uses: actions/checkout@v4
+        if: matrix.enabled == 'true'
+
+      - name: Set up Python 3.12
+        if: matrix.enabled == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        if: matrix.enabled == 'true'
+        working-directory: services/${{ matrix.service }}
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        if: matrix.enabled == 'true'
+        working-directory: services/${{ matrix.service }}
+        run: python -m pytest tests/ -v

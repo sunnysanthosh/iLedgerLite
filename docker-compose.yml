@@ -25,8 +25,9 @@ services:
     ports:
       - "8001:8000"
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-ledgerlite}:${POSTGRES_PASSWORD:-ledgerlite_dev}@postgres:5432/ledgerlite
-      - REDIS_URL=redis://redis:6379/0
+      - AUTH_DATABASE_URL=postgresql://${POSTGRES_USER:-ledgerlite}:${POSTGRES_PASSWORD:-ledgerlite_dev}@postgres:5432/ledgerlite
+      - AUTH_REDIS_URL=redis://redis:6379/0
+      - AUTH_JWT_SECRET=${JWT_SECRET:-dev-secret-change-me}
     depends_on:
       - postgres
       - redis
@@ -36,8 +37,9 @@ services:
     ports:
       - "8002:8000"
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-ledgerlite}:${POSTGRES_PASSWORD:-ledgerlite_dev}@postgres:5432/ledgerlite
-      - REDIS_URL=redis://redis:6379/1
+      - USER_DATABASE_URL=postgresql://${POSTGRES_USER:-ledgerlite}:${POSTGRES_PASSWORD:-ledgerlite_dev}@postgres:5432/ledgerlite
+      - USER_REDIS_URL=redis://redis:6379/1
+      - USER_JWT_SECRET=${JWT_SECRET:-dev-secret-change-me}
     depends_on:
       - postgres
       - redis
@@ -47,8 +49,9 @@ services:
     ports:
       - "8003:8000"
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-ledgerlite}:${POSTGRES_PASSWORD:-ledgerlite_dev}@postgres:5432/ledgerlite
-      - REDIS_URL=redis://redis:6379/2
+      - TXN_DATABASE_URL=postgresql://${POSTGRES_USER:-ledgerlite}:${POSTGRES_PASSWORD:-ledgerlite_dev}@postgres:5432/ledgerlite
+      - TXN_REDIS_URL=redis://redis:6379/2
+      - TXN_JWT_SECRET=${JWT_SECRET:-dev-secret-change-me}
     depends_on:
       - postgres
       - redis
@@ -58,8 +61,9 @@ services:
     ports:
       - "8004:8000"
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-ledgerlite}:${POSTGRES_PASSWORD:-ledgerlite_dev}@postgres:5432/ledgerlite
-      - REDIS_URL=redis://redis:6379/3
+      - LEDGER_DATABASE_URL=postgresql://${POSTGRES_USER:-ledgerlite}:${POSTGRES_PASSWORD:-ledgerlite_dev}@postgres:5432/ledgerlite
+      - LEDGER_REDIS_URL=redis://redis:6379/3
+      - LEDGER_JWT_SECRET=${JWT_SECRET:-dev-secret-change-me}
     depends_on:
       - postgres
       - redis
@@ -69,8 +73,9 @@ services:
     ports:
       - "8005:8000"
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-ledgerlite}:${POSTGRES_PASSWORD:-ledgerlite_dev}@postgres:5432/ledgerlite
-      - REDIS_URL=redis://redis:6379/4
+      - REPORT_DATABASE_URL=postgresql://${POSTGRES_USER:-ledgerlite}:${POSTGRES_PASSWORD:-ledgerlite_dev}@postgres:5432/ledgerlite
+      - REPORT_REDIS_URL=redis://redis:6379/4
+      - REPORT_JWT_SECRET=${JWT_SECRET:-dev-secret-change-me}
     depends_on:
       - postgres
       - redis
@@ -80,8 +85,9 @@ services:
     ports:
       - "8006:8000"
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-ledgerlite}:${POSTGRES_PASSWORD:-ledgerlite_dev}@postgres:5432/ledgerlite
-      - REDIS_URL=redis://redis:6379/5
+      - AI_DATABASE_URL=postgresql://${POSTGRES_USER:-ledgerlite}:${POSTGRES_PASSWORD:-ledgerlite_dev}@postgres:5432/ledgerlite
+      - AI_REDIS_URL=redis://redis:6379/5
+      - AI_JWT_SECRET=${JWT_SECRET:-dev-secret-change-me}
     depends_on:
       - postgres
       - redis
@@ -91,8 +97,9 @@ services:
     ports:
       - "8007:8000"
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-ledgerlite}:${POSTGRES_PASSWORD:-ledgerlite_dev}@postgres:5432/ledgerlite
-      - REDIS_URL=redis://redis:6379/6
+      - NOTIFICATION_DATABASE_URL=postgresql://${POSTGRES_USER:-ledgerlite}:${POSTGRES_PASSWORD:-ledgerlite_dev}@postgres:5432/ledgerlite
+      - NOTIFICATION_REDIS_URL=redis://redis:6379/6
+      - NOTIFICATION_JWT_SECRET=${JWT_SECRET:-dev-secret-change-me}
     depends_on:
       - postgres
       - redis
@@ -102,8 +109,9 @@ services:
     ports:
       - "8008:8000"
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-ledgerlite}:${POSTGRES_PASSWORD:-ledgerlite_dev}@postgres:5432/ledgerlite
-      - REDIS_URL=redis://redis:6379/7
+      - SYNC_DATABASE_URL=postgresql://${POSTGRES_USER:-ledgerlite}:${POSTGRES_PASSWORD:-ledgerlite_dev}@postgres:5432/ledgerlite
+      - SYNC_REDIS_URL=redis://redis:6379/7
+      - SYNC_JWT_SECRET=${JWT_SECRET:-dev-secret-change-me}
     depends_on:
       - postgres
       - redis

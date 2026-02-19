@@ -1,0 +1,251 @@
+-- ==========================================================================
+-- LedgerLite Comprehensive Test/Seed Data
+-- Mirrors shared/test_data.py exactly. Deterministic UUIDs for idempotency.
+-- Usage: psql -h localhost -U ledgerlite -d ledgerlite -f database/seeds/test_data.sql
+-- ==========================================================================
+
+BEGIN;
+
+-- ==========================================================================
+-- USERS (6)
+-- ==========================================================================
+INSERT INTO users (id, email, password_hash, full_name, phone, is_active, created_at, updated_at) VALUES
+    ('00000000-0000-4000-a000-000000000001', 'priya.sharma@example.com', '$2b$12$vktf4/uFra5w.a5Vfs2zruxPOsKG.pAi.TerBws56jabdHu/B6zPa', 'Priya Sharma', '+919876543001', TRUE, NOW() - INTERVAL '90 days', NOW()),
+    ('00000000-0000-4000-a000-000000000002', 'rajesh.kumar@example.com', '$2b$12$vktf4/uFra5w.a5Vfs2zruxPOsKG.pAi.TerBws56jabdHu/B6zPa', 'Rajesh Kumar', '+919876543002', TRUE, NOW() - INTERVAL '90 days', NOW()),
+    ('00000000-0000-4000-a000-000000000003', 'anita.patel@example.com', '$2b$12$vktf4/uFra5w.a5Vfs2zruxPOsKG.pAi.TerBws56jabdHu/B6zPa', 'Anita Patel', '+919876543003', TRUE, NOW() - INTERVAL '90 days', NOW()),
+    ('00000000-0000-4000-a000-000000000004', 'vikram.singh@example.com', '$2b$12$vktf4/uFra5w.a5Vfs2zruxPOsKG.pAi.TerBws56jabdHu/B6zPa', 'Vikram Singh', '+919876543004', TRUE, NOW() - INTERVAL '60 days', NOW()),
+    ('00000000-0000-4000-a000-000000000005', 'meena.reddy@example.com', '$2b$12$vktf4/uFra5w.a5Vfs2zruxPOsKG.pAi.TerBws56jabdHu/B6zPa', 'Meena Reddy', '+919876543005', FALSE, NOW() - INTERVAL '90 days', NOW()),
+    ('00000000-0000-4000-a000-000000000006', 'arjun.nair@example.com', '$2b$12$vktf4/uFra5w.a5Vfs2zruxPOsKG.pAi.TerBws56jabdHu/B6zPa', 'Arjun Nair', NULL, TRUE, NOW() - INTERVAL '45 days', NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- ==========================================================================
+-- USER SETTINGS (6)
+-- ==========================================================================
+INSERT INTO user_settings (id, user_id, account_type, currency, language, business_category, notifications_enabled, onboarding_completed, created_at, updated_at) VALUES
+    ('00000000-0000-4000-a100-000000000001', '00000000-0000-4000-a000-000000000001', 'personal', 'INR', 'en', NULL, TRUE, TRUE, NOW() - INTERVAL '90 days', NOW()),
+    ('00000000-0000-4000-a100-000000000002', '00000000-0000-4000-a000-000000000002', 'business', 'INR', 'en', 'retail', TRUE, TRUE, NOW() - INTERVAL '90 days', NOW()),
+    ('00000000-0000-4000-a100-000000000003', '00000000-0000-4000-a000-000000000003', 'both', 'INR', 'en', 'food_services', TRUE, TRUE, NOW() - INTERVAL '90 days', NOW()),
+    ('00000000-0000-4000-a100-000000000004', '00000000-0000-4000-a000-000000000004', NULL, 'INR', 'en', NULL, TRUE, FALSE, NOW() - INTERVAL '60 days', NOW()),
+    ('00000000-0000-4000-a100-000000000005', '00000000-0000-4000-a000-000000000005', 'personal', 'INR', 'en', NULL, FALSE, TRUE, NOW() - INTERVAL '90 days', NOW()),
+    ('00000000-0000-4000-a100-000000000006', '00000000-0000-4000-a000-000000000006', 'personal', 'USD', 'en', NULL, TRUE, TRUE, NOW() - INTERVAL '45 days', NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- ==========================================================================
+-- SYSTEM CATEGORIES (29) — deterministic UUIDs (supersedes categories.sql)
+-- ==========================================================================
+INSERT INTO categories (id, user_id, name, type, icon, is_system, created_at) VALUES
+    -- Income (8)
+    ('00000000-0000-4000-c100-000000000001', NULL, 'Salary', 'income', 'briefcase', TRUE, NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-c100-000000000002', NULL, 'Freelance', 'income', 'laptop', TRUE, NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-c100-000000000003', NULL, 'Business Income', 'income', 'store', TRUE, NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-c100-000000000004', NULL, 'Investment Returns', 'income', 'trending-up', TRUE, NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-c100-000000000005', NULL, 'Rental Income', 'income', 'home', TRUE, NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-c100-000000000006', NULL, 'Gift Received', 'income', 'gift', TRUE, NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-c100-000000000007', NULL, 'Refund', 'income', 'rotate-ccw', TRUE, NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-c100-000000000008', NULL, 'Other Income', 'income', 'plus-circle', TRUE, NOW() - INTERVAL '90 days'),
+    -- Expense (21)
+    ('00000000-0000-4000-c100-000000000009', NULL, 'Food & Dining', 'expense', 'utensils', TRUE, NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-c100-000000000010', NULL, 'Groceries', 'expense', 'shopping-cart', TRUE, NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-c100-000000000011', NULL, 'Transport', 'expense', 'car', TRUE, NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-c100-000000000012', NULL, 'Fuel', 'expense', 'fuel', TRUE, NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-c100-000000000013', NULL, 'Rent', 'expense', 'home', TRUE, NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-c100-000000000014', NULL, 'Utilities', 'expense', 'zap', TRUE, NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-c100-000000000015', NULL, 'Mobile & Internet', 'expense', 'smartphone', TRUE, NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-c100-000000000016', NULL, 'Shopping', 'expense', 'shopping-bag', TRUE, NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-c100-000000000017', NULL, 'Healthcare', 'expense', 'heart', TRUE, NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-c100-000000000018', NULL, 'Education', 'expense', 'book', TRUE, NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-c100-000000000019', NULL, 'Entertainment', 'expense', 'film', TRUE, NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-c100-000000000020', NULL, 'Travel', 'expense', 'map', TRUE, NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-c100-000000000021', NULL, 'Insurance', 'expense', 'shield', TRUE, NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-c100-000000000022', NULL, 'EMI / Loan Payment', 'expense', 'credit-card', TRUE, NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-c100-000000000023', NULL, 'Subscription', 'expense', 'repeat', TRUE, NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-c100-000000000024', NULL, 'Gift / Donation', 'expense', 'gift', TRUE, NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-c100-000000000025', NULL, 'Taxes', 'expense', 'file-text', TRUE, NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-c100-000000000026', NULL, 'Maintenance', 'expense', 'tool', TRUE, NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-c100-000000000027', NULL, 'Salary Expense', 'expense', 'users', TRUE, NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-c100-000000000028', NULL, 'Supplier Payment', 'expense', 'truck', TRUE, NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-c100-000000000029', NULL, 'Other Expense', 'expense', 'minus-circle', TRUE, NOW() - INTERVAL '90 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- ==========================================================================
+-- CUSTOM CATEGORIES (8)
+-- ==========================================================================
+INSERT INTO categories (id, user_id, name, type, icon, is_system, created_at) VALUES
+    ('00000000-0000-4000-c000-000000000001', '00000000-0000-4000-a000-000000000001', 'Tuition Income', 'income', 'book', FALSE, NOW() - INTERVAL '60 days'),
+    ('00000000-0000-4000-c000-000000000002', '00000000-0000-4000-a000-000000000001', 'Pet Care', 'expense', 'heart', FALSE, NOW() - INTERVAL '60 days'),
+    ('00000000-0000-4000-c000-000000000003', '00000000-0000-4000-a000-000000000002', 'Counter Sale', 'income', 'shopping-cart', FALSE, NOW() - INTERVAL '85 days'),
+    ('00000000-0000-4000-c000-000000000004', '00000000-0000-4000-a000-000000000002', 'Wholesale', 'income', 'truck', FALSE, NOW() - INTERVAL '85 days'),
+    ('00000000-0000-4000-c000-000000000005', '00000000-0000-4000-a000-000000000002', 'Packaging', 'expense', 'box', FALSE, NOW() - INTERVAL '85 days'),
+    ('00000000-0000-4000-c000-000000000006', '00000000-0000-4000-a000-000000000003', 'Catering Income', 'income', 'utensils', FALSE, NOW() - INTERVAL '80 days'),
+    ('00000000-0000-4000-c000-000000000007', '00000000-0000-4000-a000-000000000003', 'Kitchen Supplies', 'expense', 'shopping-cart', FALSE, NOW() - INTERVAL '80 days'),
+    ('00000000-0000-4000-c000-000000000008', '00000000-0000-4000-a000-000000000003', 'Commission', 'income', 'percent', FALSE, NOW() - INTERVAL '35 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- ==========================================================================
+-- ACCOUNTS (12)
+-- ==========================================================================
+INSERT INTO accounts (id, user_id, name, type, currency, balance, is_active, created_at, updated_at) VALUES
+    -- Priya (U1)
+    ('00000000-0000-4000-b000-000000000001', '00000000-0000-4000-a000-000000000001', 'Cash', 'cash', 'INR', 15000.00, TRUE, NOW() - INTERVAL '90 days', NOW()),
+    ('00000000-0000-4000-b000-000000000002', '00000000-0000-4000-a000-000000000001', 'SBI Savings', 'bank', 'INR', 85000.50, TRUE, NOW() - INTERVAL '90 days', NOW()),
+    ('00000000-0000-4000-b000-000000000003', '00000000-0000-4000-a000-000000000001', 'HDFC Credit Card', 'credit_card', 'INR', -12500.00, TRUE, NOW() - INTERVAL '90 days', NOW()),
+    -- Rajesh (U2)
+    ('00000000-0000-4000-b000-000000000004', '00000000-0000-4000-a000-000000000002', 'Shop Cash Register', 'cash', 'INR', 28000.00, TRUE, NOW() - INTERVAL '90 days', NOW()),
+    ('00000000-0000-4000-b000-000000000005', '00000000-0000-4000-a000-000000000002', 'ICICI Current Account', 'bank', 'INR', 150000.00, TRUE, NOW() - INTERVAL '90 days', NOW()),
+    ('00000000-0000-4000-b000-000000000006', '00000000-0000-4000-a000-000000000002', 'Paytm Wallet', 'wallet', 'INR', 5000.00, TRUE, NOW() - INTERVAL '90 days', NOW()),
+    -- Anita (U3)
+    ('00000000-0000-4000-b000-000000000007', '00000000-0000-4000-a000-000000000003', 'Personal Cash', 'cash', 'INR', 8000.00, TRUE, NOW() - INTERVAL '90 days', NOW()),
+    ('00000000-0000-4000-b000-000000000008', '00000000-0000-4000-a000-000000000003', 'Kotak Business Account', 'bank', 'INR', 45000.00, TRUE, NOW() - INTERVAL '90 days', NOW()),
+    ('00000000-0000-4000-b000-000000000009', '00000000-0000-4000-a000-000000000003', 'Home Loan', 'loan', 'INR', -500000.00, TRUE, NOW() - INTERVAL '90 days', NOW()),
+    -- Vikram (U4)
+    ('00000000-0000-4000-b000-000000000010', '00000000-0000-4000-a000-000000000004', 'Cash', 'cash', 'INR', 3000.00, TRUE, NOW() - INTERVAL '60 days', NOW()),
+    -- Meena (U5)
+    ('00000000-0000-4000-b000-000000000011', '00000000-0000-4000-a000-000000000005', 'Canara Bank Savings', 'bank', 'INR', 20000.00, FALSE, NOW() - INTERVAL '90 days', NOW()),
+    -- Arjun (U6)
+    ('00000000-0000-4000-b000-000000000012', '00000000-0000-4000-a000-000000000006', 'USD Wallet', 'wallet', 'USD', 500.00, TRUE, NOW() - INTERVAL '45 days', NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- ==========================================================================
+-- TRANSACTIONS (55)
+-- ==========================================================================
+INSERT INTO transactions (id, user_id, account_id, category_id, type, amount, description, transaction_date, created_at, updated_at) VALUES
+    -- Priya (U1): 20 transactions
+    ('00000000-0000-4000-d000-000000000001', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-b000-000000000002', '00000000-0000-4000-c100-000000000001', 'income', 65000.00, 'Monthly salary - January', NOW() - INTERVAL '60 days', NOW() - INTERVAL '60 days', NOW() - INTERVAL '60 days'),
+    ('00000000-0000-4000-d000-000000000002', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-b000-000000000002', '00000000-0000-4000-c100-000000000001', 'income', 65000.00, 'Monthly salary - February', NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days'),
+    ('00000000-0000-4000-d000-000000000003', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-b000-000000000002', '00000000-0000-4000-c100-000000000002', 'income', 15000.00, 'Website design project', NOW() - INTERVAL '45 days', NOW() - INTERVAL '45 days', NOW() - INTERVAL '45 days'),
+    ('00000000-0000-4000-d000-000000000004', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-b000-000000000001', '00000000-0000-4000-c000-000000000001', 'income', 5000.00, 'Tuition classes - batch A', NOW() - INTERVAL '20 days', NOW() - INTERVAL '20 days', NOW() - INTERVAL '20 days'),
+    ('00000000-0000-4000-d000-000000000005', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-b000-000000000001', '00000000-0000-4000-c100-000000000010', 'expense', 3500.00, 'Monthly groceries - BigBasket', NOW() - INTERVAL '55 days', NOW() - INTERVAL '55 days', NOW() - INTERVAL '55 days'),
+    ('00000000-0000-4000-d000-000000000006', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-b000-000000000001', '00000000-0000-4000-c100-000000000010', 'expense', 2800.00, 'Weekly vegetables & fruits', NOW() - INTERVAL '25 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '25 days'),
+    ('00000000-0000-4000-d000-000000000007', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-b000-000000000002', '00000000-0000-4000-c100-000000000013', 'expense', 18000.00, 'Monthly rent - Jan', NOW() - INTERVAL '58 days', NOW() - INTERVAL '58 days', NOW() - INTERVAL '58 days'),
+    ('00000000-0000-4000-d000-000000000008', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-b000-000000000002', '00000000-0000-4000-c100-000000000013', 'expense', 18000.00, 'Monthly rent - Feb', NOW() - INTERVAL '28 days', NOW() - INTERVAL '28 days', NOW() - INTERVAL '28 days'),
+    ('00000000-0000-4000-d000-000000000009', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-b000-000000000002', '00000000-0000-4000-c100-000000000014', 'expense', 2500.00, 'Electricity bill', NOW() - INTERVAL '50 days', NOW() - INTERVAL '50 days', NOW() - INTERVAL '50 days'),
+    ('00000000-0000-4000-d000-000000000010', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-b000-000000000003', '00000000-0000-4000-c100-000000000023', 'expense', 499.00, 'Netflix subscription', NOW() - INTERVAL '40 days', NOW() - INTERVAL '40 days', NOW() - INTERVAL '40 days'),
+    ('00000000-0000-4000-d000-000000000011', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-b000-000000000003', '00000000-0000-4000-c100-000000000023', 'expense', 199.00, 'Spotify premium', NOW() - INTERVAL '40 days', NOW() - INTERVAL '40 days', NOW() - INTERVAL '40 days'),
+    ('00000000-0000-4000-d000-000000000012', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-b000-000000000001', '00000000-0000-4000-c100-000000000009', 'expense', 1200.00, 'Dinner at Barbeque Nation', NOW() - INTERVAL '15 days', NOW() - INTERVAL '15 days', NOW() - INTERVAL '15 days'),
+    ('00000000-0000-4000-d000-000000000013', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-b000-000000000001', '00000000-0000-4000-c100-000000000011', 'expense', 850.00, 'Uber rides this week', NOW() - INTERVAL '10 days', NOW() - INTERVAL '10 days', NOW() - INTERVAL '10 days'),
+    ('00000000-0000-4000-d000-000000000014', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-b000-000000000003', '00000000-0000-4000-c100-000000000016', 'expense', 4500.00, 'Amazon shopping', NOW() - INTERVAL '35 days', NOW() - INTERVAL '35 days', NOW() - INTERVAL '35 days'),
+    ('00000000-0000-4000-d000-000000000015', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-b000-000000000002', '00000000-0000-4000-c100-000000000017', 'expense', 1500.00, 'Doctor consultation', NOW() - INTERVAL '22 days', NOW() - INTERVAL '22 days', NOW() - INTERVAL '22 days'),
+    ('00000000-0000-4000-d000-000000000016', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-b000-000000000001', '00000000-0000-4000-c000-000000000002', 'expense', 2000.00, 'Vet visit for Luna', NOW() - INTERVAL '18 days', NOW() - INTERVAL '18 days', NOW() - INTERVAL '18 days'),
+    ('00000000-0000-4000-d000-000000000017', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-b000-000000000002', NULL, 'transfer', 10000.00, 'Transfer to cash', NOW() - INTERVAL '12 days', NOW() - INTERVAL '12 days', NOW() - INTERVAL '12 days'),
+    ('00000000-0000-4000-d000-000000000018', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-b000-000000000002', '00000000-0000-4000-c100-000000000004', 'income', 3200.00, 'Mutual fund dividend', NOW() - INTERVAL '8 days', NOW() - INTERVAL '8 days', NOW() - INTERVAL '8 days'),
+    ('00000000-0000-4000-d000-000000000019', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-b000-000000000002', '00000000-0000-4000-c100-000000000015', 'expense', 599.00, 'Jio recharge', NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days'),
+    ('00000000-0000-4000-d000-000000000020', '00000000-0000-4000-a000-000000000001', '00000000-0000-4000-b000-000000000002', '00000000-0000-4000-c100-000000000021', 'expense', 5000.00, 'LIC premium', NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days'),
+
+    -- Rajesh (U2): 18 transactions
+    ('00000000-0000-4000-d000-000000000021', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-b000-000000000004', '00000000-0000-4000-c000-000000000003', 'income', 8500.00, 'Daily counter sales', NOW() - INTERVAL '85 days', NOW() - INTERVAL '85 days', NOW() - INTERVAL '85 days'),
+    ('00000000-0000-4000-d000-000000000022', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-b000-000000000004', '00000000-0000-4000-c000-000000000003', 'income', 12000.00, 'Weekend sales', NOW() - INTERVAL '78 days', NOW() - INTERVAL '78 days', NOW() - INTERVAL '78 days'),
+    ('00000000-0000-4000-d000-000000000023', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-b000-000000000005', '00000000-0000-4000-c000-000000000004', 'income', 45000.00, 'Wholesale order - Suresh Textiles', NOW() - INTERVAL '70 days', NOW() - INTERVAL '70 days', NOW() - INTERVAL '70 days'),
+    ('00000000-0000-4000-d000-000000000024', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-b000-000000000005', '00000000-0000-4000-c000-000000000004', 'income', 32000.00, 'Wholesale order - Lakshmi Stores', NOW() - INTERVAL '55 days', NOW() - INTERVAL '55 days', NOW() - INTERVAL '55 days'),
+    ('00000000-0000-4000-d000-000000000025', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-b000-000000000004', '00000000-0000-4000-c000-000000000003', 'income', 9500.00, 'Counter sales - festive week', NOW() - INTERVAL '42 days', NOW() - INTERVAL '42 days', NOW() - INTERVAL '42 days'),
+    ('00000000-0000-4000-d000-000000000026', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-b000-000000000006', '00000000-0000-4000-c100-000000000003', 'income', 6000.00, 'UPI payments collected', NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days'),
+    ('00000000-0000-4000-d000-000000000027', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-b000-000000000005', '00000000-0000-4000-c000-000000000004', 'income', 28000.00, 'Wholesale order - Mohammed Traders', NOW() - INTERVAL '20 days', NOW() - INTERVAL '20 days', NOW() - INTERVAL '20 days'),
+    ('00000000-0000-4000-d000-000000000028', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-b000-000000000005', '00000000-0000-4000-c100-000000000028', 'expense', 35000.00, 'Supplier - Mumbai Fabrics', NOW() - INTERVAL '65 days', NOW() - INTERVAL '65 days', NOW() - INTERVAL '65 days'),
+    ('00000000-0000-4000-d000-000000000029', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-b000-000000000005', '00000000-0000-4000-c100-000000000028', 'expense', 22000.00, 'Supplier - Surat Silk House', NOW() - INTERVAL '40 days', NOW() - INTERVAL '40 days', NOW() - INTERVAL '40 days'),
+    ('00000000-0000-4000-d000-000000000030', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-b000-000000000005', '00000000-0000-4000-c100-000000000027', 'expense', 15000.00, 'Staff salary - Ramu', NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days'),
+    ('00000000-0000-4000-d000-000000000031', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-b000-000000000005', '00000000-0000-4000-c100-000000000027', 'expense', 12000.00, 'Staff salary - Sita', NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days'),
+    ('00000000-0000-4000-d000-000000000032', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-b000-000000000005', '00000000-0000-4000-c100-000000000013', 'expense', 25000.00, 'Shop rent - January', NOW() - INTERVAL '60 days', NOW() - INTERVAL '60 days', NOW() - INTERVAL '60 days'),
+    ('00000000-0000-4000-d000-000000000033', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-b000-000000000005', '00000000-0000-4000-c100-000000000013', 'expense', 25000.00, 'Shop rent - February', NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days'),
+    ('00000000-0000-4000-d000-000000000034', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-b000-000000000004', '00000000-0000-4000-c000-000000000005', 'expense', 3500.00, 'Packaging materials', NOW() - INTERVAL '50 days', NOW() - INTERVAL '50 days', NOW() - INTERVAL '50 days'),
+    ('00000000-0000-4000-d000-000000000035', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-b000-000000000004', '00000000-0000-4000-c100-000000000026', 'expense', 2000.00, 'Shop AC repair', NOW() - INTERVAL '25 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '25 days'),
+    ('00000000-0000-4000-d000-000000000036', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-b000-000000000004', NULL, 'transfer', 20000.00, 'Cash deposit to bank', NOW() - INTERVAL '15 days', NOW() - INTERVAL '15 days', NOW() - INTERVAL '15 days'),
+    ('00000000-0000-4000-d000-000000000037', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-b000-000000000005', '00000000-0000-4000-c100-000000000025', 'expense', 8000.00, 'GST payment Q3', NOW() - INTERVAL '10 days', NOW() - INTERVAL '10 days', NOW() - INTERVAL '10 days'),
+    ('00000000-0000-4000-d000-000000000038', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-b000-000000000005', '00000000-0000-4000-c100-000000000014', 'expense', 4500.00, 'Shop electricity bill', NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days'),
+
+    -- Anita (U3): 12 transactions
+    ('00000000-0000-4000-d000-000000000039', '00000000-0000-4000-a000-000000000003', '00000000-0000-4000-b000-000000000008', '00000000-0000-4000-c000-000000000006', 'income', 25000.00, 'Wedding catering - Sharma family', NOW() - INTERVAL '80 days', NOW() - INTERVAL '80 days', NOW() - INTERVAL '80 days'),
+    ('00000000-0000-4000-d000-000000000040', '00000000-0000-4000-a000-000000000003', '00000000-0000-4000-b000-000000000008', '00000000-0000-4000-c000-000000000006', 'income', 18000.00, 'Birthday party catering', NOW() - INTERVAL '50 days', NOW() - INTERVAL '50 days', NOW() - INTERVAL '50 days'),
+    ('00000000-0000-4000-d000-000000000041', '00000000-0000-4000-a000-000000000003', '00000000-0000-4000-b000-000000000007', '00000000-0000-4000-c000-000000000008', 'income', 3000.00, 'Referral commission', NOW() - INTERVAL '35 days', NOW() - INTERVAL '35 days', NOW() - INTERVAL '35 days'),
+    ('00000000-0000-4000-d000-000000000042', '00000000-0000-4000-a000-000000000003', '00000000-0000-4000-b000-000000000008', '00000000-0000-4000-c000-000000000006', 'income', 35000.00, 'Corporate event catering', NOW() - INTERVAL '15 days', NOW() - INTERVAL '15 days', NOW() - INTERVAL '15 days'),
+    ('00000000-0000-4000-d000-000000000043', '00000000-0000-4000-a000-000000000003', '00000000-0000-4000-b000-000000000007', '00000000-0000-4000-c000-000000000007', 'expense', 8000.00, 'Bulk spices & ingredients', NOW() - INTERVAL '75 days', NOW() - INTERVAL '75 days', NOW() - INTERVAL '75 days'),
+    ('00000000-0000-4000-d000-000000000044', '00000000-0000-4000-a000-000000000003', '00000000-0000-4000-b000-000000000007', '00000000-0000-4000-c000-000000000007', 'expense', 5500.00, 'Cooking equipment', NOW() - INTERVAL '45 days', NOW() - INTERVAL '45 days', NOW() - INTERVAL '45 days'),
+    ('00000000-0000-4000-d000-000000000045', '00000000-0000-4000-a000-000000000003', '00000000-0000-4000-b000-000000000008', '00000000-0000-4000-c100-000000000022', 'expense', 22000.00, 'Home loan EMI - Jan', NOW() - INTERVAL '60 days', NOW() - INTERVAL '60 days', NOW() - INTERVAL '60 days'),
+    ('00000000-0000-4000-d000-000000000046', '00000000-0000-4000-a000-000000000003', '00000000-0000-4000-b000-000000000008', '00000000-0000-4000-c100-000000000022', 'expense', 22000.00, 'Home loan EMI - Feb', NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days'),
+    ('00000000-0000-4000-d000-000000000047', '00000000-0000-4000-a000-000000000003', '00000000-0000-4000-b000-000000000007', '00000000-0000-4000-c100-000000000010', 'expense', 4000.00, 'Monthly groceries', NOW() - INTERVAL '25 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '25 days'),
+    ('00000000-0000-4000-d000-000000000048', '00000000-0000-4000-a000-000000000003', '00000000-0000-4000-b000-000000000008', '00000000-0000-4000-c100-000000000027', 'expense', 10000.00, 'Kitchen helper salary', NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days'),
+    ('00000000-0000-4000-d000-000000000049', '00000000-0000-4000-a000-000000000003', '00000000-0000-4000-b000-000000000008', '00000000-0000-4000-c100-000000000014', 'expense', 3500.00, 'Gas cylinder + electricity', NOW() - INTERVAL '20 days', NOW() - INTERVAL '20 days', NOW() - INTERVAL '20 days'),
+    ('00000000-0000-4000-d000-000000000050', '00000000-0000-4000-a000-000000000003', '00000000-0000-4000-b000-000000000008', NULL, 'transfer', 5000.00, 'Business to personal cash', NOW() - INTERVAL '10 days', NOW() - INTERVAL '10 days', NOW() - INTERVAL '10 days'),
+
+    -- Vikram (U4): 3 transactions
+    ('00000000-0000-4000-d000-000000000051', '00000000-0000-4000-a000-000000000004', '00000000-0000-4000-b000-000000000010', '00000000-0000-4000-c100-000000000008', 'income', 5000.00, 'Cash gift from uncle', NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days'),
+    ('00000000-0000-4000-d000-000000000052', '00000000-0000-4000-a000-000000000004', '00000000-0000-4000-b000-000000000010', '00000000-0000-4000-c100-000000000009', 'expense', 800.00, 'Lunch with friends', NOW() - INTERVAL '20 days', NOW() - INTERVAL '20 days', NOW() - INTERVAL '20 days'),
+    ('00000000-0000-4000-d000-000000000053', '00000000-0000-4000-a000-000000000004', '00000000-0000-4000-b000-000000000010', '00000000-0000-4000-c100-000000000011', 'expense', 200.00, 'Auto rickshaw', NOW() - INTERVAL '15 days', NOW() - INTERVAL '15 days', NOW() - INTERVAL '15 days'),
+
+    -- Meena (U5): 2 transactions (historical, inactive user)
+    ('00000000-0000-4000-d000-000000000054', '00000000-0000-4000-a000-000000000005', '00000000-0000-4000-b000-000000000011', '00000000-0000-4000-c100-000000000001', 'income', 30000.00, 'Last salary before deactivation', NOW() - INTERVAL '90 days', NOW() - INTERVAL '90 days', NOW() - INTERVAL '90 days'),
+    ('00000000-0000-4000-d000-000000000055', '00000000-0000-4000-a000-000000000005', '00000000-0000-4000-b000-000000000011', '00000000-0000-4000-c100-000000000013', 'expense', 10000.00, 'Last rent payment', NOW() - INTERVAL '88 days', NOW() - INTERVAL '88 days', NOW() - INTERVAL '88 days')
+ON CONFLICT (id) DO NOTHING;
+
+-- ==========================================================================
+-- CUSTOMERS (8)
+-- ==========================================================================
+INSERT INTO customers (id, user_id, name, phone, email, address, created_at, updated_at) VALUES
+    -- Rajesh's customers
+    ('00000000-0000-4000-e000-000000000001', '00000000-0000-4000-a000-000000000002', 'Suresh Textiles', '+919800100001', 'suresh.textiles@example.com', '12 Cloth Market, Ahmedabad', NOW() - INTERVAL '85 days', NOW()),
+    ('00000000-0000-4000-e000-000000000002', '00000000-0000-4000-a000-000000000002', 'Lakshmi Stores', '+919800100002', 'lakshmi.stores@example.com', '45 MG Road, Pune', NOW() - INTERVAL '85 days', NOW()),
+    ('00000000-0000-4000-e000-000000000003', '00000000-0000-4000-a000-000000000002', 'Mohammed Traders', '+919800100003', NULL, '78 Station Road, Mumbai', NOW() - INTERVAL '70 days', NOW()),
+    ('00000000-0000-4000-e000-000000000004', '00000000-0000-4000-a000-000000000002', 'Deepa Fashions', '+919800100004', 'deepa.fashions@example.com', NULL, NOW() - INTERVAL '50 days', NOW()),
+    -- Anita's customers
+    ('00000000-0000-4000-e000-000000000005', '00000000-0000-4000-a000-000000000003', 'Ramesh Sweets & Snacks', '+919800200001', 'ramesh.sweets@example.com', '22 Food Street, Chennai', NOW() - INTERVAL '80 days', NOW()),
+    ('00000000-0000-4000-e000-000000000006', '00000000-0000-4000-a000-000000000003', 'Kavitha Flower Decorations', '+919800200002', NULL, '9 Temple Road, Coimbatore', NOW() - INTERVAL '70 days', NOW()),
+    ('00000000-0000-4000-e000-000000000007', '00000000-0000-4000-a000-000000000003', 'Prakash Hardware', '+919800200003', 'prakash.hw@example.com', '56 Industrial Area, Bangalore', NOW() - INTERVAL '60 days', NOW()),
+    ('00000000-0000-4000-e000-000000000008', '00000000-0000-4000-a000-000000000003', 'Sunita Dairy Farm', '+919800200004', 'sunita.dairy@example.com', NULL, NOW() - INTERVAL '30 days', NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- ==========================================================================
+-- LEDGER ENTRIES (25)
+-- ==========================================================================
+INSERT INTO ledger_entries (id, user_id, customer_id, type, amount, description, due_date, is_settled, created_at, updated_at) VALUES
+    -- Rajesh -> Suresh Textiles (5)
+    ('00000000-0000-4000-f000-000000000001', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-e000-000000000001', 'debit', 15000.00, 'Fabric order #101', CURRENT_DATE - 30, TRUE, NOW() - INTERVAL '60 days', NOW()),
+    ('00000000-0000-4000-f000-000000000002', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-e000-000000000001', 'credit', 15000.00, 'Payment received - #101', NULL, TRUE, NOW() - INTERVAL '55 days', NOW()),
+    ('00000000-0000-4000-f000-000000000003', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-e000-000000000001', 'debit', 25000.00, 'Fabric order #102', CURRENT_DATE - 5, FALSE, NOW() - INTERVAL '30 days', NOW()),
+    ('00000000-0000-4000-f000-000000000004', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-e000-000000000001', 'credit', 10000.00, 'Partial payment - #102', NULL, FALSE, NOW() - INTERVAL '20 days', NOW()),
+    ('00000000-0000-4000-f000-000000000005', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-e000-000000000001', 'debit', 8000.00, 'Fabric order #103', CURRENT_DATE + 15, FALSE, NOW() - INTERVAL '5 days', NOW()),
+
+    -- Rajesh -> Lakshmi Stores (4)
+    ('00000000-0000-4000-f000-000000000006', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-e000-000000000002', 'debit', 12000.00, 'Saree lot #50', CURRENT_DATE - 15, FALSE, NOW() - INTERVAL '40 days', NOW()),
+    ('00000000-0000-4000-f000-000000000007', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-e000-000000000002', 'debit', 8000.00, 'Saree lot #51', CURRENT_DATE + 10, FALSE, NOW() - INTERVAL '20 days', NOW()),
+    ('00000000-0000-4000-f000-000000000008', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-e000-000000000002', 'credit', 5000.00, 'Advance payment', NULL, FALSE, NOW() - INTERVAL '15 days', NOW()),
+    ('00000000-0000-4000-f000-000000000009', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-e000-000000000002', 'debit', 3000.00, 'Alterations', NULL, TRUE, NOW() - INTERVAL '10 days', NOW()),
+
+    -- Rajesh -> Mohammed Traders (3)
+    ('00000000-0000-4000-f000-000000000010', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-e000-000000000003', 'debit', 20000.00, 'Bulk cotton order', CURRENT_DATE - 10, TRUE, NOW() - INTERVAL '45 days', NOW()),
+    ('00000000-0000-4000-f000-000000000011', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-e000-000000000003', 'credit', 20000.00, 'Full payment', NULL, TRUE, NOW() - INTERVAL '35 days', NOW()),
+    ('00000000-0000-4000-f000-000000000012', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-e000-000000000003', 'debit', 18000.00, 'New silk order', CURRENT_DATE + 30, FALSE, NOW() - INTERVAL '10 days', NOW()),
+
+    -- Rajesh -> Deepa Fashions (2)
+    ('00000000-0000-4000-f000-000000000013', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-e000-000000000004', 'debit', 7500.00, 'Designer collection', CURRENT_DATE - 3, FALSE, NOW() - INTERVAL '15 days', NOW()),
+    ('00000000-0000-4000-f000-000000000014', '00000000-0000-4000-a000-000000000002', '00000000-0000-4000-e000-000000000004', 'credit', 2500.00, 'Part payment', NULL, FALSE, NOW() - INTERVAL '10 days', NOW()),
+
+    -- Anita -> Ramesh Sweets (3)
+    ('00000000-0000-4000-f000-000000000015', '00000000-0000-4000-a000-000000000003', '00000000-0000-4000-e000-000000000005', 'debit', 15000.00, 'Diwali sweets catering', CURRENT_DATE - 20, TRUE, NOW() - INTERVAL '50 days', NOW()),
+    ('00000000-0000-4000-f000-000000000016', '00000000-0000-4000-a000-000000000003', '00000000-0000-4000-e000-000000000005', 'credit', 15000.00, 'Full payment received', NULL, TRUE, NOW() - INTERVAL '40 days', NOW()),
+    ('00000000-0000-4000-f000-000000000017', '00000000-0000-4000-a000-000000000003', '00000000-0000-4000-e000-000000000005', 'debit', 10000.00, 'Republic Day order', CURRENT_DATE + 5, FALSE, NOW() - INTERVAL '10 days', NOW()),
+
+    -- Anita -> Kavitha Flowers (3)
+    ('00000000-0000-4000-f000-000000000018', '00000000-0000-4000-a000-000000000003', '00000000-0000-4000-e000-000000000006', 'debit', 8000.00, 'Flower decoration supply', CURRENT_DATE - 7, FALSE, NOW() - INTERVAL '20 days', NOW()),
+    ('00000000-0000-4000-f000-000000000019', '00000000-0000-4000-a000-000000000003', '00000000-0000-4000-e000-000000000006', 'credit', 3000.00, 'Partial payment', NULL, FALSE, NOW() - INTERVAL '15 days', NOW()),
+    ('00000000-0000-4000-f000-000000000020', '00000000-0000-4000-a000-000000000003', '00000000-0000-4000-e000-000000000006', 'debit', 5000.00, 'Temple event flowers', CURRENT_DATE + 20, FALSE, NOW() - INTERVAL '5 days', NOW()),
+
+    -- Anita -> Prakash Hardware (3)
+    ('00000000-0000-4000-f000-000000000021', '00000000-0000-4000-a000-000000000003', '00000000-0000-4000-e000-000000000007', 'debit', 12000.00, 'Kitchen renovation supplies', CURRENT_DATE - 40, TRUE, NOW() - INTERVAL '50 days', NOW()),
+    ('00000000-0000-4000-f000-000000000022', '00000000-0000-4000-a000-000000000003', '00000000-0000-4000-e000-000000000007', 'credit', 12000.00, 'Full payment', NULL, TRUE, NOW() - INTERVAL '40 days', NOW()),
+    ('00000000-0000-4000-f000-000000000023', '00000000-0000-4000-a000-000000000003', '00000000-0000-4000-e000-000000000007', 'debit', 6000.00, 'Utensils order', CURRENT_DATE + 25, FALSE, NOW() - INTERVAL '8 days', NOW()),
+
+    -- Anita -> Sunita Dairy (2)
+    ('00000000-0000-4000-f000-000000000024', '00000000-0000-4000-a000-000000000003', '00000000-0000-4000-e000-000000000008', 'debit', 4500.00, 'Monthly milk supply', CURRENT_DATE - 2, FALSE, NOW() - INTERVAL '10 days', NOW()),
+    ('00000000-0000-4000-f000-000000000025', '00000000-0000-4000-a000-000000000003', '00000000-0000-4000-e000-000000000008', 'credit', 2000.00, 'Partial payment', NULL, FALSE, NOW() - INTERVAL '5 days', NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- ==========================================================================
+-- RECEIPTS (5)
+-- ==========================================================================
+INSERT INTO receipts (id, transaction_id, file_url, ocr_text, created_at) VALUES
+    ('00000000-0000-4000-f100-000000000001', '00000000-0000-4000-d000-000000000005', '/receipts/priya_groceries_001.jpg', 'BigBasket Invoice #BB2024001 Total: Rs 3,500.00', NOW() - INTERVAL '55 days'),
+    ('00000000-0000-4000-f100-000000000002', '00000000-0000-4000-d000-000000000007', '/receipts/priya_rent_jan.pdf', 'Rent Receipt January 2024 Amount: Rs 18,000', NOW() - INTERVAL '58 days'),
+    ('00000000-0000-4000-f100-000000000003', '00000000-0000-4000-d000-000000000028', '/receipts/rajesh_supplier_mumbai.jpg', 'Mumbai Fabrics Tax Invoice GST: 18% Total: Rs 35,000.00', NOW() - INTERVAL '65 days'),
+    ('00000000-0000-4000-f100-000000000004', '00000000-0000-4000-d000-000000000039', '/receipts/anita_catering_sharma.pdf', 'Catering Invoice - Sharma Wedding 250 guests Total: Rs 25,000', NOW() - INTERVAL '80 days'),
+    ('00000000-0000-4000-f100-000000000005', '00000000-0000-4000-d000-000000000045', '/receipts/anita_emi_jan.pdf', 'Home Loan EMI Receipt Bank: Kotak EMI: Rs 22,000.00', NOW() - INTERVAL '60 days')
+ON CONFLICT (id) DO NOTHING;
+
+COMMIT;
