@@ -88,9 +88,14 @@ GitHub Actions run on push/PR to `main`:
 - **test.yml** -- per-service test matrix with change detection
 - **lint.yml** -- ruff check + format check
 
-## API Documentation
+## Documentation
 
-See [docs/API.md](docs/API.md) for full endpoint documentation with request/response examples.
+| Document | Description |
+|---|---|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Mermaid diagrams — system context, service mesh, data flow, auth, infra, ER |
+| [docs/API.md](docs/API.md) | Full endpoint reference with request/response examples |
+| [docs/SPRINT-LOG.md](docs/SPRINT-LOG.md) | Sprint history and delivered features |
+| [ROADMAP.md](ROADMAP.md) | Implementation roadmap and status |
 
 ## Tech Stack
 
@@ -106,7 +111,7 @@ See [docs/API.md](docs/API.md) for full endpoint documentation with request/resp
 
 All 8 backend microservices are complete with 146 tests passing. See [ROADMAP.md](ROADMAP.md) for the full implementation plan and [docs/SPRINT-LOG.md](docs/SPRINT-LOG.md) for sprint history.
 
-**Next:** Sprint 6 -- Database migrations (Alembic), Kubernetes manifests, Terraform IaC, CI/CD build/deploy pipelines.
+**Next:** Sprint 6C (Terraform IaC) or Phase 2 growth features (OTP login, bank SMS parsing, UPI).
 
 ## License
 
