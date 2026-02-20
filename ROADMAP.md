@@ -21,12 +21,12 @@
 | **shared/** | Done — base settings, pagination, auth utilities |
 | **CLAUDE.md** | Done — coding conventions, testing patterns, CI/CD, branching strategy |
 | **apps/mobile-app** | Done — Flutter (auth, dashboard, transactions, accounts, ledger, reports, settings, offline sync) — 43 Dart files |
-| **apps/web-dashboard** | Empty (.gitkeep) |
+| **apps/web-dashboard** | Done — Next.js 14, 6 tabs (dashboard, transactions, accounts, ledger, reports, analytics), TypeScript, Recharts, TanStack Query, Zustand |
 | **infrastructure/kubernetes** | Done — Kustomize base + staging/production overlays (23 manifests) |
 | **infrastructure/terraform** | Empty (.gitkeep) — deferred to 6C |
 
 **Total: 146 tests passing across 8 services**
-**All backend microservices complete. Flutter mobile app feature-complete (Sprint 8).**
+**All backend microservices complete. Flutter mobile app feature-complete (Sprint 8). Web dashboard complete (Sprint 9).**
 
 ---
 
@@ -359,4 +359,4 @@
 
 ## Recommended Next Step
 
-**Sprint 6B is complete.** Next options: complete Sprint 6C (Terraform IaC) for cloud provisioning, or start Post-MVP Phase 2 features (OTP login, bank SMS parsing, UPI integration, multi-language), or build the web dashboard.
+**Sprint 9 is complete.** Next options: Sprint 6C (Terraform IaC) for cloud provisioning, or Post-MVP Phase 2 features (OTP login, bank SMS parsing, UPI integration, multi-language).
