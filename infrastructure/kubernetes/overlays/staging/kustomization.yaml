@@ -31,7 +31,28 @@ patches:
       kind: Ingress
       name: ledgerlite-ingress
 
-  # Staging secrets (base64-encoded dev defaults — replace in real deployment)
+  # Remove in-cluster Postgres — staging uses Cloud SQL (managed, persistent)
+  # After terraform apply, get the IP: terraform output cloudsql_private_ip
+  - patch: |
+      $patch: delete
+      apiVersion: apps/v1
+      kind: StatefulSet
+      metadata:
+        name: postgres
+    target:
+      kind: StatefulSet
+      name: postgres
+  - patch: |
+      $patch: delete
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: postgres
+    target:
+      kind: Service
+      name: postgres
+
+  # Staging secrets — replace CLOUD_SQL_PRIVATE_IP with: terraform output cloudsql_private_ip
   - patch: |
       apiVersion: v1
       kind: Secret
@@ -41,7 +62,8 @@ patches:
         JWT_SECRET: "staging-secret-change-me"
         DATABASE_USER: "ledgerlite"
         DATABASE_PASSWORD: "ledgerlite-staging"
-        DATABASE_URL: "postgresql+asyncpg://ledgerlite:ledgerlite-staging@postgres:5432/ledgerlite"
+        DATABASE_URL: "postgresql+asyncpg://ledgerlite:ledgerlite-staging@CLOUD_SQL_PRIVATE_IP:5432/ledgerlite"
+        REDIS_URL: "redis://redis:6379"
 
   # Staging image tags
   - patch: |
