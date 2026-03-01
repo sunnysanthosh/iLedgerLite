@@ -4,7 +4,6 @@ from decimal import Decimal
 
 import pytest
 from httpx import AsyncClient
-
 from models.customer import Customer
 
 LEDGER_ENTRY_URL = "/ledger-entry"
@@ -195,7 +194,9 @@ async def test_update_ledger_entry_not_found(client: AsyncClient, auth_headers: 
 
 
 @pytest.mark.asyncio
-async def test_settled_entries_excluded_from_outstanding(client: AsyncClient, auth_headers: dict, seed_customer: Customer):
+async def test_settled_entries_excluded_from_outstanding(
+    client: AsyncClient, auth_headers: dict, seed_customer: Customer
+):
     # Create a debit entry and mark it settled
     create_resp = await client.post(
         LEDGER_ENTRY_URL,

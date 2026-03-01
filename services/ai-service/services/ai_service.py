@@ -4,11 +4,10 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from models.category import Category
 from models.transaction import Transaction
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 # ---------------------------------------------------------------------------
 # Keyword → category mapping for rule-based categorization
@@ -129,11 +128,13 @@ async def categorize_transaction(
     predictions = []
     for name, confidence in sorted(scored.items(), key=lambda x: -x[1]):
         cat = categories.get(name)
-        predictions.append({
-            "category_id": cat.id if cat else None,
-            "category_name": name,
-            "confidence": round(min(confidence + 0.3, 0.95), 2),
-        })
+        predictions.append(
+            {
+                "category_id": cat.id if cat else None,
+                "category_name": name,
+                "confidence": round(min(confidence + 0.3, 0.95), 2),
+            }
+        )
 
     return predictions[:5]
 
@@ -189,12 +190,14 @@ async def get_spending_insights(
         if previous > 0:
             deviation = float((current - previous) / previous)
             if abs(deviation) > 0.5:  # >50% change
-                anomalies.append({
-                    "category_name": cat_name,
-                    "current_amount": str(current),
-                    "average_amount": str(previous),
-                    "deviation": round(deviation, 2),
-                })
+                anomalies.append(
+                    {
+                        "category_name": cat_name,
+                        "current_amount": str(current),
+                        "average_amount": str(previous),
+                        "deviation": round(deviation, 2),
+                    }
+                )
 
     # Trends
     trends = []
@@ -208,12 +211,14 @@ async def get_spending_insights(
             trend = "decreasing"
         else:
             trend = "stable"
-        trends.append({
-            "category_name": cat_name,
-            "trend": trend,
-            "last_30_days": str(current),
-            "previous_30_days": str(previous),
-        })
+        trends.append(
+            {
+                "category_name": cat_name,
+                "trend": trend,
+                "last_30_days": str(current),
+                "previous_30_days": str(previous),
+            }
+        )
 
     # Top categories (last 30 days)
     top_categories = sorted(

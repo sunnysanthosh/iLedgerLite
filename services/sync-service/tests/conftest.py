@@ -1,9 +1,9 @@
 import sys
-from pathlib import Path
 import uuid as _uuid_mod
 from collections.abc import AsyncGenerator
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -13,13 +13,12 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from config import settings
-from models.base import Base
-from models.user import User
 from models.account import Account
+from models.base import Base
 from models.customer import Customer
-from models.transaction import Transaction
-from models.ledger_entry import LedgerEntry
 from models.sync_log import SyncLog  # noqa: F401 — register with Base
+from models.transaction import Transaction
+from models.user import User
 
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 engine = create_async_engine(TEST_DB_URL, echo=False)
@@ -128,19 +127,29 @@ async def seed_customer(db_session: AsyncSession, seed_user: User) -> Customer:
 
 @pytest.fixture
 async def seed_server_transactions(
-    db_session: AsyncSession, seed_user: User, seed_account: Account,
+    db_session: AsyncSession,
+    seed_user: User,
+    seed_account: Account,
 ) -> list[Transaction]:
     """Create server-side transactions for pull tests."""
     now = datetime.now(timezone.utc)
     txns = [
         Transaction(
-            id=_uuid_mod.uuid4(), user_id=seed_user.id, account_id=seed_account.id,
-            type="expense", amount=Decimal("500.00"), description="Server expense 1",
+            id=_uuid_mod.uuid4(),
+            user_id=seed_user.id,
+            account_id=seed_account.id,
+            type="expense",
+            amount=Decimal("500.00"),
+            description="Server expense 1",
             transaction_date=now - timedelta(days=2),
         ),
         Transaction(
-            id=_uuid_mod.uuid4(), user_id=seed_user.id, account_id=seed_account.id,
-            type="income", amount=Decimal("10000.00"), description="Server salary",
+            id=_uuid_mod.uuid4(),
+            user_id=seed_user.id,
+            account_id=seed_account.id,
+            type="income",
+            amount=Decimal("10000.00"),
+            description="Server salary",
             transaction_date=now - timedelta(days=1),
         ),
     ]

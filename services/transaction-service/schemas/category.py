@@ -3,7 +3,6 @@ from datetime import datetime
 
 from pydantic import BaseModel, field_validator
 
-
 VALID_CATEGORY_TYPES = {"income", "expense"}
 
 

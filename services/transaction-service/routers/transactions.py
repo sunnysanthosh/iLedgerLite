@@ -1,10 +1,8 @@
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from db import get_db
+from fastapi import APIRouter, Depends, Query, status
 from models.user import User
 from schemas.transaction import (
     TransactionCreate,
@@ -20,6 +18,7 @@ from services.transaction_service import (
     list_transactions,
     update_transaction,
 )
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
@@ -46,7 +45,8 @@ async def list_all(
     db: AsyncSession = Depends(get_db),
 ):
     items, total = await list_transactions(
-        current_user.id, db,
+        current_user.id,
+        db,
         account_id=account_id,
         category_id=category_id,
         txn_type=type,

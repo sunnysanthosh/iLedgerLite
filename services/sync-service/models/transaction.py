@@ -4,10 +4,9 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
+from models.base import Base
 from sqlalchemy import DateTime, ForeignKey, Numeric, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
-
-from models.base import Base
 
 
 class Transaction(Base):
@@ -22,4 +21,6 @@ class Transaction(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     transaction_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )

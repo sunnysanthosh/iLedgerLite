@@ -1,7 +1,5 @@
-from fastapi import APIRouter, Depends, status
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from db import get_db
+from fastapi import APIRouter, Depends, status
 from models.user import User
 from schemas.user import (
     OnboardingRequest,
@@ -17,6 +15,7 @@ from services.user_service import (
     update_user_profile,
     update_user_settings,
 )
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/users", tags=["users"])
 

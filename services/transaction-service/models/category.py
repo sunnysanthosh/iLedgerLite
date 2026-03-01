@@ -1,10 +1,9 @@
 import uuid
 from datetime import datetime
 
+from models.base import Base
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
-
-from models.base import Base
 
 
 class Category(Base):

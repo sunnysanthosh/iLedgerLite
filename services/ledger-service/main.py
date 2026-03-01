@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-
 from routers.customers import router as customers_router
 from routers.ledger import router as ledger_router
 

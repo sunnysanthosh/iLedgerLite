@@ -3,19 +3,16 @@ from datetime import datetime
 from decimal import Decimal
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from models.account import Account
 from models.transaction import Transaction
 from schemas.transaction import TransactionCreate, TransactionUpdate
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 async def _reload_transaction(txn_id: uuid.UUID, db: AsyncSession) -> Transaction:
     result = await db.execute(
-        select(Transaction)
-        .where(Transaction.id == txn_id)
-        .execution_options(populate_existing=True)
+        select(Transaction).where(Transaction.id == txn_id).execution_options(populate_existing=True)
     )
     return result.scalars().first()
 
@@ -30,7 +27,9 @@ async def _verify_account_ownership(account_id: uuid.UUID, user_id: uuid.UUID, d
     return account
 
 
-async def _update_account_balance(account: Account, amount: Decimal, txn_type: str, reverse: bool, db: AsyncSession) -> None:
+async def _update_account_balance(
+    account: Account, amount: Decimal, txn_type: str, reverse: bool, db: AsyncSession
+) -> None:
     """Adjust account balance. If reverse=True, undo a previous transaction."""
     if reverse:
         if txn_type == "income":
@@ -102,16 +101,16 @@ async def list_transactions(
 
 
 async def get_transaction(txn_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSession) -> Transaction:
-    result = await db.execute(
-        select(Transaction).where(Transaction.id == txn_id, Transaction.user_id == user_id)
-    )
+    result = await db.execute(select(Transaction).where(Transaction.id == txn_id, Transaction.user_id == user_id))
     txn = result.scalars().first()
     if txn is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
     return txn
 
 
-async def update_transaction(txn_id: uuid.UUID, user_id: uuid.UUID, data: TransactionUpdate, db: AsyncSession) -> Transaction:
+async def update_transaction(
+    txn_id: uuid.UUID, user_id: uuid.UUID, data: TransactionUpdate, db: AsyncSession
+) -> Transaction:
     txn = await get_transaction(txn_id, user_id, db)
     account = await _verify_account_ownership(txn.account_id, user_id, db)
 

@@ -4,14 +4,13 @@ from datetime import datetime, timezone
 from decimal import Decimal
 
 import pytest
+from config import settings
 from httpx import ASGITransport, AsyncClient
 from jose import jwt
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
-from config import settings
 from models.account import Account
 from models.base import Base
 from models.user import User
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 engine = create_async_engine(TEST_DB_URL, echo=False)
@@ -109,38 +108,55 @@ async def seed_full_data(db_session: AsyncSession):
     """Seed all shared test data into the transaction-service test DB."""
     from models.category import Category
     from models.transaction import Transaction
-    from shared.test_data import USERS, ACCOUNTS, ALL_CATEGORIES, TRANSACTIONS
+
+    from shared.test_data import ACCOUNTS, ALL_CATEGORIES, TRANSACTIONS, USERS
 
     for u in USERS:
         user = User(
-            id=u["id"], email=u["email"], password_hash=u["password_hash"],
-            full_name=u["full_name"], phone=u["phone"], is_active=u["is_active"],
+            id=u["id"],
+            email=u["email"],
+            password_hash=u["password_hash"],
+            full_name=u["full_name"],
+            phone=u["phone"],
+            is_active=u["is_active"],
         )
         db_session.add(user)
     await db_session.flush()
 
     for a in ACCOUNTS:
         acct = Account(
-            id=a["id"], user_id=a["user_id"], name=a["name"],
-            type=a["type"], currency=a["currency"],
-            balance=a["balance"], is_active=a["is_active"],
+            id=a["id"],
+            user_id=a["user_id"],
+            name=a["name"],
+            type=a["type"],
+            currency=a["currency"],
+            balance=a["balance"],
+            is_active=a["is_active"],
         )
         db_session.add(acct)
     await db_session.flush()
 
     for c in ALL_CATEGORIES:
         cat = Category(
-            id=c["id"], user_id=c["user_id"], name=c["name"],
-            type=c["type"], icon=c["icon"], is_system=c["is_system"],
+            id=c["id"],
+            user_id=c["user_id"],
+            name=c["name"],
+            type=c["type"],
+            icon=c["icon"],
+            is_system=c["is_system"],
         )
         db_session.add(cat)
     await db_session.flush()
 
     for t in TRANSACTIONS:
         txn = Transaction(
-            id=t["id"], user_id=t["user_id"], account_id=t["account_id"],
-            category_id=t["category_id"], type=t["type"],
-            amount=t["amount"], description=t["description"],
+            id=t["id"],
+            user_id=t["user_id"],
+            account_id=t["account_id"],
+            category_id=t["category_id"],
+            type=t["type"],
+            amount=t["amount"],
+            description=t["description"],
             transaction_date=t["transaction_date"],
         )
         db_session.add(txn)

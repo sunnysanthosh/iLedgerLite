@@ -3,13 +3,12 @@ from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 
 import pytest
+from config import settings
 from httpx import ASGITransport, AsyncClient
 from jose import jwt
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
-from config import settings
 from models.base import Base
 from models.user import User
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 engine = create_async_engine(TEST_DB_URL, echo=False)
@@ -92,7 +91,8 @@ def auth_headers(seed_user: User) -> dict:
 async def seed_full_data(db_session: AsyncSession):
     """Seed all shared test users + settings into the user-service test DB."""
     from models.user_settings import UserSettings
-    from shared.test_data import USERS, USER_SETTINGS
+
+    from shared.test_data import USER_SETTINGS, USERS
 
     for u in USERS:
         user = User(

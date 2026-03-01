@@ -1,9 +1,9 @@
 import sys
-from pathlib import Path
 import uuid as _uuid_mod
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -14,11 +14,11 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from config import settings
-from models.base import Base
-from models.user import User
 from models.account import Account  # noqa: F401 — register with Base
+from models.base import Base
 from models.category import Category
 from models.transaction import Transaction
+from models.user import User
 
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 engine = create_async_engine(TEST_DB_URL, echo=False)
@@ -108,7 +108,9 @@ async def seed_categories(db_session: AsyncSession) -> list[Category]:
         Category(id=_uuid_mod.uuid4(), user_id=None, name="Groceries", type="expense", icon="cart", is_system=True),
         Category(id=_uuid_mod.uuid4(), user_id=None, name="Transport", type="expense", icon="car", is_system=True),
         Category(id=_uuid_mod.uuid4(), user_id=None, name="Salary", type="income", icon="briefcase", is_system=True),
-        Category(id=_uuid_mod.uuid4(), user_id=None, name="Food & Dining", type="expense", icon="utensils", is_system=True),
+        Category(
+            id=_uuid_mod.uuid4(), user_id=None, name="Food & Dining", type="expense", icon="utensils", is_system=True
+        ),
         Category(id=_uuid_mod.uuid4(), user_id=None, name="Shopping", type="expense", icon="bag", is_system=True),
         Category(id=_uuid_mod.uuid4(), user_id=None, name="Utilities", type="expense", icon="zap", is_system=True),
         Category(id=_uuid_mod.uuid4(), user_id=None, name="Freelance", type="income", icon="laptop", is_system=True),
@@ -120,47 +122,90 @@ async def seed_categories(db_session: AsyncSession) -> list[Category]:
 
 
 @pytest.fixture
-async def seed_transactions(db_session: AsyncSession, seed_user: User, seed_categories: list[Category]) -> list[Transaction]:
+async def seed_transactions(
+    db_session: AsyncSession, seed_user: User, seed_categories: list[Category]
+) -> list[Transaction]:
     """Seed transactions for insights tests."""
     from datetime import timedelta
 
     now = datetime.now(timezone.utc)
     cat_by_name = {c.name: c for c in seed_categories}
     acct = Account(
-        id=_uuid_mod.uuid4(), user_id=seed_user.id, name="Test Cash",
-        type="cash", currency="INR", balance=Decimal("10000.00"), is_active=True,
+        id=_uuid_mod.uuid4(),
+        user_id=seed_user.id,
+        name="Test Cash",
+        type="cash",
+        currency="INR",
+        balance=Decimal("10000.00"),
+        is_active=True,
     )
     db_session.add(acct)
     await db_session.flush()
 
     txns = [
         # Last 30 days — expenses
-        Transaction(id=_uuid_mod.uuid4(), user_id=seed_user.id, account_id=acct.id,
-                    category_id=cat_by_name["Groceries"].id, type="expense",
-                    amount=Decimal("2500.00"), description="Weekly groceries",
-                    transaction_date=now - timedelta(days=5)),
-        Transaction(id=_uuid_mod.uuid4(), user_id=seed_user.id, account_id=acct.id,
-                    category_id=cat_by_name["Transport"].id, type="expense",
-                    amount=Decimal("800.00"), description="Uber rides",
-                    transaction_date=now - timedelta(days=10)),
-        Transaction(id=_uuid_mod.uuid4(), user_id=seed_user.id, account_id=acct.id,
-                    category_id=cat_by_name["Food & Dining"].id, type="expense",
-                    amount=Decimal("1200.00"), description="Restaurant dinner",
-                    transaction_date=now - timedelta(days=15)),
+        Transaction(
+            id=_uuid_mod.uuid4(),
+            user_id=seed_user.id,
+            account_id=acct.id,
+            category_id=cat_by_name["Groceries"].id,
+            type="expense",
+            amount=Decimal("2500.00"),
+            description="Weekly groceries",
+            transaction_date=now - timedelta(days=5),
+        ),
+        Transaction(
+            id=_uuid_mod.uuid4(),
+            user_id=seed_user.id,
+            account_id=acct.id,
+            category_id=cat_by_name["Transport"].id,
+            type="expense",
+            amount=Decimal("800.00"),
+            description="Uber rides",
+            transaction_date=now - timedelta(days=10),
+        ),
+        Transaction(
+            id=_uuid_mod.uuid4(),
+            user_id=seed_user.id,
+            account_id=acct.id,
+            category_id=cat_by_name["Food & Dining"].id,
+            type="expense",
+            amount=Decimal("1200.00"),
+            description="Restaurant dinner",
+            transaction_date=now - timedelta(days=15),
+        ),
         # Last 30 days — income
-        Transaction(id=_uuid_mod.uuid4(), user_id=seed_user.id, account_id=acct.id,
-                    category_id=cat_by_name["Salary"].id, type="income",
-                    amount=Decimal("50000.00"), description="Monthly salary",
-                    transaction_date=now - timedelta(days=2)),
+        Transaction(
+            id=_uuid_mod.uuid4(),
+            user_id=seed_user.id,
+            account_id=acct.id,
+            category_id=cat_by_name["Salary"].id,
+            type="income",
+            amount=Decimal("50000.00"),
+            description="Monthly salary",
+            transaction_date=now - timedelta(days=2),
+        ),
         # Previous 30 days — expenses (for trend comparison)
-        Transaction(id=_uuid_mod.uuid4(), user_id=seed_user.id, account_id=acct.id,
-                    category_id=cat_by_name["Groceries"].id, type="expense",
-                    amount=Decimal("1000.00"), description="Groceries prev month",
-                    transaction_date=now - timedelta(days=40)),
-        Transaction(id=_uuid_mod.uuid4(), user_id=seed_user.id, account_id=acct.id,
-                    category_id=cat_by_name["Transport"].id, type="expense",
-                    amount=Decimal("600.00"), description="Metro prev month",
-                    transaction_date=now - timedelta(days=45)),
+        Transaction(
+            id=_uuid_mod.uuid4(),
+            user_id=seed_user.id,
+            account_id=acct.id,
+            category_id=cat_by_name["Groceries"].id,
+            type="expense",
+            amount=Decimal("1000.00"),
+            description="Groceries prev month",
+            transaction_date=now - timedelta(days=40),
+        ),
+        Transaction(
+            id=_uuid_mod.uuid4(),
+            user_id=seed_user.id,
+            account_id=acct.id,
+            category_id=cat_by_name["Transport"].id,
+            type="expense",
+            amount=Decimal("600.00"),
+            description="Metro prev month",
+            transaction_date=now - timedelta(days=45),
+        ),
     ]
     for t in txns:
         db_session.add(t)

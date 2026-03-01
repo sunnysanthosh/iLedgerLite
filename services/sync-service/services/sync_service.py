@@ -3,12 +3,11 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from models.ledger_entry import LedgerEntry
 from models.sync_log import SyncLog
 from models.transaction import Transaction
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 async def push_changes(
@@ -174,7 +173,9 @@ async def get_sync_status(
     pending_ledger = 0
     if last_synced_at:
         txn_count = await db.execute(
-            select(func.count()).select_from(Transaction).where(
+            select(func.count())
+            .select_from(Transaction)
+            .where(
                 Transaction.user_id == user_id,
                 Transaction.updated_at > last_synced_at,
             )
@@ -182,7 +183,9 @@ async def get_sync_status(
         pending_txn = txn_count.scalar() or 0
 
         entry_count = await db.execute(
-            select(func.count()).select_from(LedgerEntry).where(
+            select(func.count())
+            .select_from(LedgerEntry)
+            .where(
                 LedgerEntry.user_id == user_id,
                 LedgerEntry.updated_at > last_synced_at,
             )

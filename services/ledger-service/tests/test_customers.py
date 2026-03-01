@@ -2,7 +2,6 @@ import uuid
 
 import pytest
 from httpx import AsyncClient
-
 from models.customer import Customer
 
 CUSTOMERS_URL = "/customers"

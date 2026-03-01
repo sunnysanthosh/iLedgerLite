@@ -1,13 +1,12 @@
 import uuid
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
-
 from models.user import User
 from models.user_settings import UserSettings
 from schemas.user import OnboardingRequest, SettingsUpdate, UserUpdate
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 
 async def _reload_user(user_id: uuid.UUID, db: AsyncSession) -> User:

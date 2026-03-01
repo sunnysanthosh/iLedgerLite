@@ -4,7 +4,6 @@ from decimal import Decimal
 
 from pydantic import BaseModel, field_validator
 
-
 VALID_TRANSACTION_TYPES = {"income", "expense", "transfer"}
 
 

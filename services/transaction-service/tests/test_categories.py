@@ -1,7 +1,6 @@
 import pytest
 from httpx import AsyncClient
 
-
 CATEGORIES_URL = "/categories"
 
 

@@ -1,13 +1,12 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from db import get_db
+from fastapi import APIRouter, Depends, Query
 from models.user import User
 from schemas.sync import PullResponse, PushRequest, PushResponse, SyncStatusResponse
 from services.security import get_current_user
 from services.sync_service import get_sync_status, pull_changes, push_changes
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/sync", tags=["sync"])
 

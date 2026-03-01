@@ -3,16 +3,15 @@ from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 
 import pytest
+from config import settings
 from httpx import ASGITransport, AsyncClient
 from jose import jwt
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
-from config import settings
 from models.base import Base
-from models.user import User
 from models.customer import Customer  # noqa: F401 — register with Base
 from models.ledger_entry import LedgerEntry  # noqa: F401
 from models.notification import Notification
+from models.user import User
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 engine = create_async_engine(TEST_DB_URL, echo=False)
@@ -102,25 +101,44 @@ async def seed_full_data(db_session: AsyncSession):
     from shared.test_data import CUSTOMERS, LEDGER_ENTRIES, USERS
 
     for u in USERS:
-        db_session.add(User(
-            id=_id(u["id"]), email=u["email"], password_hash=u["password_hash"],
-            full_name=u["full_name"], phone=u["phone"], is_active=u["is_active"],
-        ))
+        db_session.add(
+            User(
+                id=_id(u["id"]),
+                email=u["email"],
+                password_hash=u["password_hash"],
+                full_name=u["full_name"],
+                phone=u["phone"],
+                is_active=u["is_active"],
+            )
+        )
         await db_session.flush()
 
     for c in CUSTOMERS:
-        db_session.add(Customer(
-            id=_id(c["id"]), user_id=_id(c["user_id"]), name=c["name"],
-            phone=c["phone"], email=c["email"], address=c["address"],
-        ))
+        db_session.add(
+            Customer(
+                id=_id(c["id"]),
+                user_id=_id(c["user_id"]),
+                name=c["name"],
+                phone=c["phone"],
+                email=c["email"],
+                address=c["address"],
+            )
+        )
         await db_session.flush()
 
     for e in LEDGER_ENTRIES:
-        db_session.add(LedgerEntry(
-            id=_id(e["id"]), user_id=_id(e["user_id"]), customer_id=_id(e["customer_id"]),
-            type=e["type"], amount=e["amount"], description=e["description"],
-            due_date=e["due_date"], is_settled=e["is_settled"],
-        ))
+        db_session.add(
+            LedgerEntry(
+                id=_id(e["id"]),
+                user_id=_id(e["user_id"]),
+                customer_id=_id(e["customer_id"]),
+                type=e["type"],
+                amount=e["amount"],
+                description=e["description"],
+                due_date=e["due_date"],
+                is_settled=e["is_settled"],
+            )
+        )
         await db_session.flush()
 
 
@@ -146,21 +164,32 @@ async def seed_customer_no_balance(db_session: AsyncSession, seed_full_data) -> 
 @pytest.fixture
 async def seed_notifications(db_session: AsyncSession, seed_full_data) -> list[Notification]:
     """Create test notifications for Rajesh (from shared seed data)."""
-    from shared.test_data import USER_RAJESH_ID, CUST_SURESH_TEXTILES_ID
+    from shared.test_data import CUST_SURESH_TEXTILES_ID, USER_RAJESH_ID
 
     notifs = [
         Notification(
-            id=_uuid_mod.uuid4(), user_id=_id(USER_RAJESH_ID), type="system",
-            title="Welcome", message="Welcome to LedgerLite!", is_read=True,
+            id=_uuid_mod.uuid4(),
+            user_id=_id(USER_RAJESH_ID),
+            type="system",
+            title="Welcome",
+            message="Welcome to LedgerLite!",
+            is_read=True,
         ),
         Notification(
-            id=_uuid_mod.uuid4(), user_id=_id(USER_RAJESH_ID), type="reminder",
-            title="Payment due", message="Suresh Textiles owes 23000",
-            is_read=False, related_entity_id=_id(CUST_SURESH_TEXTILES_ID),
+            id=_uuid_mod.uuid4(),
+            user_id=_id(USER_RAJESH_ID),
+            type="reminder",
+            title="Payment due",
+            message="Suresh Textiles owes 23000",
+            is_read=False,
+            related_entity_id=_id(CUST_SURESH_TEXTILES_ID),
         ),
         Notification(
-            id=_uuid_mod.uuid4(), user_id=_id(USER_RAJESH_ID), type="overdue",
-            title="Overdue payment", message="Lakshmi Stores payment overdue",
+            id=_uuid_mod.uuid4(),
+            user_id=_id(USER_RAJESH_ID),
+            type="overdue",
+            title="Overdue payment",
+            message="Lakshmi Stores payment overdue",
             is_read=False,
         ),
     ]

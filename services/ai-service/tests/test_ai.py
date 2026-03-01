@@ -1,12 +1,11 @@
 """Tests for AI service endpoints."""
 
-import pytest
 from httpx import AsyncClient
-
 
 # ---------------------------------------------------------------------------
 # Health
 # ---------------------------------------------------------------------------
+
 
 async def test_health(client: AsyncClient):
     resp = await client.get("/health")
@@ -17,6 +16,7 @@ async def test_health(client: AsyncClient):
 # ---------------------------------------------------------------------------
 # Auth required
 # ---------------------------------------------------------------------------
+
 
 async def test_endpoints_require_auth(client: AsyncClient):
     for method, url in [
@@ -31,6 +31,7 @@ async def test_endpoints_require_auth(client: AsyncClient):
 # ---------------------------------------------------------------------------
 # Categorize
 # ---------------------------------------------------------------------------
+
 
 async def test_categorize_groceries(client: AsyncClient, auth_headers: dict, seed_categories):
     resp = await client.post(
@@ -115,6 +116,7 @@ async def test_categorize_has_category_id(client: AsyncClient, auth_headers: dic
 # Insights
 # ---------------------------------------------------------------------------
 
+
 async def test_insights_with_data(client: AsyncClient, auth_headers: dict, seed_transactions):
     resp = await client.get("/ai/insights", headers=auth_headers)
     assert resp.status_code == 200
@@ -162,6 +164,7 @@ async def test_insights_empty(client: AsyncClient, auth_headers: dict, seed_cate
 # ---------------------------------------------------------------------------
 # OCR (mock)
 # ---------------------------------------------------------------------------
+
 
 async def test_ocr_mock(client: AsyncClient, auth_headers: dict):
     resp = await client.post(

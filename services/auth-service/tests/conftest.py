@@ -3,9 +3,8 @@ from collections.abc import AsyncGenerator
 import fakeredis.aioredis
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
 from models.base import Base
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 # SQLite async engine for testing
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
@@ -63,6 +62,7 @@ async def client(db_session: AsyncSession, fake_redis) -> AsyncGenerator[AsyncCl
 async def seed_full_data(db_session: AsyncSession):
     """Seed all shared test users into the auth-service test DB."""
     from models.user import User
+
     from shared.test_data import USERS
 
     for u in USERS:

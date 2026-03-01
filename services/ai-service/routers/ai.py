@@ -1,11 +1,10 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from db import get_db
+from fastapi import APIRouter, Depends
 from models.user import User
 from schemas.ai import CategorizeRequest, CategorizeResponse, InsightsResponse, OcrRequest, OcrResponse
 from services.ai_service import categorize_transaction, get_spending_insights, mock_ocr
 from services.security import get_current_user
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 

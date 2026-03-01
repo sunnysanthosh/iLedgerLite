@@ -1,14 +1,13 @@
 import uuid
 
+from config import settings
+from db import get_db
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
+from models.user import User
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from config import settings
-from db import get_db
-from models.user import User
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -36,9 +35,7 @@ async def get_current_user(
 
     user_id = payload.get("sub")
     result = await db.execute(
-        select(User)
-        .where(User.id == uuid.UUID(user_id))
-        .execution_options(populate_existing=True)
+        select(User).where(User.id == uuid.UUID(user_id)).execution_options(populate_existing=True)
     )
     user = result.scalars().first()
     if user is None:

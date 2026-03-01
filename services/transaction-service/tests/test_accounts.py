@@ -1,7 +1,6 @@
 import pytest
 from httpx import AsyncClient
 
-
 ACCOUNTS_URL = "/accounts"
 
 

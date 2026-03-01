@@ -1,9 +1,7 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from db import get_db
+from fastapi import APIRouter, Depends, Query
 from models.user import User
 from schemas.notification import (
     MarkReadResponse,
@@ -13,6 +11,7 @@ from schemas.notification import (
 )
 from services.notification_service import create_reminder, list_notifications, mark_as_read
 from services.security import get_current_user
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
@@ -26,7 +25,11 @@ async def list_notifications_endpoint(
     db: AsyncSession = Depends(get_db),
 ):
     notifications, total, unread_count = await list_notifications(
-        user.id, db, skip=skip, limit=limit, unread_only=unread_only,
+        user.id,
+        db,
+        skip=skip,
+        limit=limit,
+        unread_only=unread_only,
     )
     return NotificationList(
         items=notifications,

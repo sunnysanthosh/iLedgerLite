@@ -3,12 +3,11 @@ from datetime import datetime, timezone
 from decimal import Decimal
 
 from fastapi import HTTPException, status
-from sqlalchemy import case, func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from models.customer import Customer
 from models.ledger_entry import LedgerEntry
 from models.notification import Notification
+from sqlalchemy import case, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 async def list_notifications(
@@ -65,9 +64,7 @@ async def mark_as_read(
 
     # Re-query to get updated state
     result = await db.execute(
-        select(Notification)
-        .where(Notification.id == notification_id)
-        .execution_options(populate_existing=True)
+        select(Notification).where(Notification.id == notification_id).execution_options(populate_existing=True)
     )
     return result.scalars().first()
 
@@ -80,9 +77,7 @@ async def create_reminder(
 ) -> Notification:
     """Create a credit reminder notification for a customer with outstanding balance."""
     # Verify customer belongs to user
-    cust_result = await db.execute(
-        select(Customer).where(Customer.id == customer_id, Customer.user_id == user_id)
-    )
+    cust_result = await db.execute(select(Customer).where(Customer.id == customer_id, Customer.user_id == user_id))
     customer = cust_result.scalars().first()
     if customer is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
@@ -113,7 +108,10 @@ async def create_reminder(
             detail="Customer has no outstanding balance",
         )
 
-    message = custom_message or f"Reminder: {customer.name} has an outstanding balance of {outstanding:.2f}. Please follow up for payment."
+    message = (
+        custom_message
+        or f"Reminder: {customer.name} has an outstanding balance of {outstanding:.2f}. Please follow up for payment."
+    )
 
     notification = Notification(
         id=uuid.uuid4(),

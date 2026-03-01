@@ -4,8 +4,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field, field_validator
 
-
 # --- Push ---
+
 
 class TransactionPush(BaseModel):
     id: uuid.UUID
@@ -40,6 +40,7 @@ class PushResponse(BaseModel):
 
 
 # --- Pull ---
+
 
 class TransactionPull(BaseModel):
     id: uuid.UUID
@@ -86,6 +87,7 @@ class PullResponse(BaseModel):
 
 
 # --- Status ---
+
 
 class SyncStatusResponse(BaseModel):
     device_id: str
