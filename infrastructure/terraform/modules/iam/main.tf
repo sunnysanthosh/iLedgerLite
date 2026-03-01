@@ -5,15 +5,6 @@ resource "google_service_account" "app" {
   project      = var.project_id
 }
 
-# Allow pods to authenticate to GCP as this SA via Workload Identity
-# Annotate K8s ServiceAccount with:
-#   iam.gke.io/gcp-service-account: <app_service_account_email>
-resource "google_service_account_iam_member" "workload_identity" {
-  service_account_id = google_service_account.app.name
-  role               = "roles/iam.workloadIdentityUser"
-  member             = "serviceAccount:${var.project_id}.svc.id.goog[ledgerlite/ledgerlite-app]"
-}
-
 # Connect to Cloud SQL from pods
 resource "google_project_iam_member" "app_cloudsql_client" {
   project = var.project_id

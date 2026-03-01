@@ -7,6 +7,14 @@ resource "google_container_cluster" "main" {
   remove_default_node_pool = true
   initial_node_count       = 1
 
+  # Explicitly set pd-standard on the temporary bootstrap node so it doesn't
+  # consume SSD quota before the default pool is removed.
+  node_config {
+    disk_type    = "pd-standard"
+    disk_size_gb = 20
+    machine_type = var.machine_type
+  }
+
   network    = var.network
   subnetwork = var.subnetwork
 
