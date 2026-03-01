@@ -2,9 +2,9 @@ import time
 import uuid
 
 import pytest
+from config import settings
 from httpx import AsyncClient
 
-from config import settings
 from tests.conftest import make_access_token
 
 ME_URL = "/users/me"
@@ -200,9 +200,8 @@ async def test_deactivate_account(client: AsyncClient, auth_headers: dict):
 
 @pytest.mark.asyncio
 async def test_deactivated_user_cannot_access(client: AsyncClient, seed_user, auth_headers: dict, db_session):
-    from sqlalchemy import update
-
     from models.user import User
+    from sqlalchemy import update
 
     await db_session.execute(update(User).where(User.id == seed_user.id).values(is_active=False))
     await db_session.flush()

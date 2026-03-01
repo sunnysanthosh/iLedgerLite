@@ -2,19 +2,14 @@ import uuid
 from decimal import Decimal
 
 from fastapi import HTTPException, status
+from models.account import Account
+from schemas.account import AccountCreate, AccountUpdate
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models.account import Account
-from schemas.account import AccountCreate, AccountUpdate
-
 
 async def _reload_account(account_id: uuid.UUID, db: AsyncSession) -> Account:
-    result = await db.execute(
-        select(Account)
-        .where(Account.id == account_id)
-        .execution_options(populate_existing=True)
-    )
+    result = await db.execute(select(Account).where(Account.id == account_id).execution_options(populate_existing=True))
     return result.scalars().first()
 
 
@@ -42,9 +37,7 @@ async def list_accounts(user_id: uuid.UUID, db: AsyncSession) -> list[Account]:
 
 
 async def get_account(account_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSession) -> Account:
-    result = await db.execute(
-        select(Account).where(Account.id == account_id, Account.user_id == user_id)
-    )
+    result = await db.execute(select(Account).where(Account.id == account_id, Account.user_id == user_id))
     account = result.scalars().first()
     if account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")

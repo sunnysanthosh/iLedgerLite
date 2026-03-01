@@ -1,9 +1,7 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from db import get_db
+from fastapi import APIRouter, Depends, Query
 from models.user import User
 from schemas.customer import (
     CustomerCreate,
@@ -14,6 +12,7 @@ from schemas.customer import (
 )
 from services.customer_service import create_customer, get_customer, list_customers, update_customer
 from services.security import get_current_user
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(tags=["customers"])
 

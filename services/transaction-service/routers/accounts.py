@@ -1,7 +1,5 @@
-from fastapi import APIRouter, Depends, status
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from db import get_db
+from fastapi import APIRouter, Depends, status
 from models.user import User
 from schemas.account import AccountCreate, AccountResponse, AccountUpdate
 from services.account_service import (
@@ -12,6 +10,7 @@ from services.account_service import (
     update_account,
 )
 from services.security import get_current_user
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/accounts", tags=["accounts"])
 
@@ -40,6 +39,7 @@ async def get_one(
     db: AsyncSession = Depends(get_db),
 ):
     import uuid
+
     return await get_account(uuid.UUID(account_id), current_user.id, db)
 
 
@@ -51,6 +51,7 @@ async def update(
     db: AsyncSession = Depends(get_db),
 ):
     import uuid
+
     return await update_account(uuid.UUID(account_id), current_user.id, data, db)
 
 
@@ -61,5 +62,6 @@ async def deactivate(
     db: AsyncSession = Depends(get_db),
 ):
     import uuid
+
     await deactivate_account(uuid.UUID(account_id), current_user.id, db)
     return {"detail": "Account deactivated"}

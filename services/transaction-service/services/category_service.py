@@ -1,11 +1,10 @@
 import uuid
 
 from fastapi import HTTPException, status
-from sqlalchemy import or_, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from models.category import Category
 from schemas.category import CategoryCreate
+from sqlalchemy import or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 async def create_category(user_id: uuid.UUID, data: CategoryCreate, db: AsyncSession) -> Category:
@@ -20,9 +19,7 @@ async def create_category(user_id: uuid.UUID, data: CategoryCreate, db: AsyncSes
     db.add(category)
     await db.flush()
     result = await db.execute(
-        select(Category)
-        .where(Category.id == category.id)
-        .execution_options(populate_existing=True)
+        select(Category).where(Category.id == category.id).execution_options(populate_existing=True)
     )
     return result.scalars().first()
 
@@ -32,9 +29,7 @@ async def list_categories(
     db: AsyncSession,
     category_type: str | None = None,
 ) -> list[Category]:
-    query = select(Category).where(
-        or_(Category.user_id == user_id, Category.is_system.is_(True))
-    )
+    query = select(Category).where(or_(Category.user_id == user_id, Category.is_system.is_(True)))
     if category_type is not None:
         query = query.where(Category.type == category_type)
     query = query.order_by(Category.is_system.desc(), Category.name)

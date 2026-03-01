@@ -1,10 +1,9 @@
 import uuid
 from datetime import datetime
 
+from models.base import Base
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
-
-from models.base import Base
 
 
 class SyncLog(Base):

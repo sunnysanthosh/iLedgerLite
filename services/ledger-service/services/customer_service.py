@@ -2,19 +2,16 @@ import uuid
 from decimal import Decimal
 
 from fastapi import HTTPException, status
-from sqlalchemy import case, func, or_, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from models.customer import Customer
 from models.ledger_entry import LedgerEntry
 from schemas.customer import CustomerCreate, CustomerUpdate
+from sqlalchemy import case, func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 async def _reload_customer(customer_id: uuid.UUID, db: AsyncSession) -> Customer:
     result = await db.execute(
-        select(Customer)
-        .where(Customer.id == customer_id)
-        .execution_options(populate_existing=True)
+        select(Customer).where(Customer.id == customer_id).execution_options(populate_existing=True)
     )
     return result.scalars().first()
 
@@ -103,9 +100,7 @@ async def list_customers(
 
 
 async def get_customer(customer_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSession) -> Customer:
-    result = await db.execute(
-        select(Customer).where(Customer.id == customer_id, Customer.user_id == user_id)
-    )
+    result = await db.execute(select(Customer).where(Customer.id == customer_id, Customer.user_id == user_id))
     customer = result.scalars().first()
     if customer is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")

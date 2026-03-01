@@ -4,14 +4,12 @@ import uuid
 from datetime import date, timedelta
 from decimal import Decimal
 
-from sqlalchemy import case, func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from models.account import Account
 from models.category import Category
-from models.customer import Customer
 from models.ledger_entry import LedgerEntry
 from models.transaction import Transaction
+from sqlalchemy import case, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 async def get_profit_loss(
@@ -154,12 +152,14 @@ async def get_cashflow(
     for bucket in sorted(period_buckets.values(), key=lambda x: x["period"]):
         total_inflows += bucket["inflows"]
         total_outflows += bucket["outflows"]
-        periods_list.append({
-            "period": bucket["period"],
-            "inflows": str(bucket["inflows"]),
-            "outflows": str(bucket["outflows"]),
-            "net": str(bucket["inflows"] - bucket["outflows"]),
-        })
+        periods_list.append(
+            {
+                "period": bucket["period"],
+                "inflows": str(bucket["inflows"]),
+                "outflows": str(bucket["outflows"]),
+                "net": str(bucket["inflows"] - bucket["outflows"]),
+            }
+        )
 
     return {
         "start_date": start_date,
@@ -206,12 +206,14 @@ async def get_budget_report(
     total_spent = Decimal("0.00")
     for row in result.all():
         total_spent += row.spent
-        categories.append({
-            "category_id": str(row.id) if row.id else None,
-            "category_name": row.name or "Uncategorized",
-            "spent": str(row.spent),
-            "transaction_count": row.transaction_count,
-        })
+        categories.append(
+            {
+                "category_id": str(row.id) if row.id else None,
+                "category_name": row.name or "Uncategorized",
+                "spent": str(row.spent),
+                "transaction_count": row.transaction_count,
+            }
+        )
 
     return {
         "start_date": start_date,
@@ -263,10 +265,7 @@ async def get_summary(
         .order_by(func.sum(Transaction.amount).desc())
         .limit(5)
     )
-    top_expense_cats = [
-        {"category_name": r.name or "Uncategorized", "total": str(r.total)}
-        for r in top_expense.all()
-    ]
+    top_expense_cats = [{"category_name": r.name or "Uncategorized", "total": str(r.total)} for r in top_expense.all()]
 
     # Top income categories (top 5)
     top_income = await db.execute(
@@ -280,10 +279,7 @@ async def get_summary(
         .order_by(func.sum(Transaction.amount).desc())
         .limit(5)
     )
-    top_income_cats = [
-        {"category_name": r.name or "Uncategorized", "total": str(r.total)}
-        for r in top_income.all()
-    ]
+    top_income_cats = [{"category_name": r.name or "Uncategorized", "total": str(r.total)} for r in top_income.all()]
 
     # Outstanding ledger (receivables = debit unsettled, payables = credit unsettled)
     ledger_result = await db.execute(
@@ -355,15 +351,17 @@ async def export_report(
     writer = csv.writer(output)
     writer.writerow(["ID", "Date", "Type", "Amount", "Category", "Account", "Description"])
     for row in rows:
-        writer.writerow([
-            str(row.id),
-            row.transaction_date.strftime("%Y-%m-%d") if row.transaction_date else "",
-            row.type,
-            str(row.amount),
-            row.category_name or "Uncategorized",
-            row.account_name or "",
-            row.description or "",
-        ])
+        writer.writerow(
+            [
+                str(row.id),
+                row.transaction_date.strftime("%Y-%m-%d") if row.transaction_date else "",
+                row.type,
+                str(row.amount),
+                row.category_name or "Uncategorized",
+                row.account_name or "",
+                row.description or "",
+            ]
+        )
 
     csv_data = output.getvalue()
     filename = f"transactions_{start_date}_{end_date}.csv"

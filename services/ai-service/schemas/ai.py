@@ -3,8 +3,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
-
 # --- Categorize ---
+
 
 class CategorizeRequest(BaseModel):
     description: str = Field(..., min_length=1, max_length=500)
@@ -23,6 +23,7 @@ class CategorizeResponse(BaseModel):
 
 
 # --- Insights ---
+
 
 class SpendingAnomaly(BaseModel):
     category_name: str
@@ -47,6 +48,7 @@ class InsightsResponse(BaseModel):
 
 
 # --- OCR ---
+
 
 class OcrRequest(BaseModel):
     image_base64: str = Field(..., min_length=1)

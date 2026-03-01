@@ -2,38 +2,29 @@ import uuid
 from decimal import Decimal
 
 from fastapi import HTTPException, status
-from sqlalchemy import case, func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from models.customer import Customer
 from models.ledger_entry import LedgerEntry
 from schemas.ledger import LedgerEntryCreate, LedgerEntryUpdate
+from sqlalchemy import case, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 async def _reload_entry(entry_id: uuid.UUID, db: AsyncSession) -> LedgerEntry:
     result = await db.execute(
-        select(LedgerEntry)
-        .where(LedgerEntry.id == entry_id)
-        .execution_options(populate_existing=True)
+        select(LedgerEntry).where(LedgerEntry.id == entry_id).execution_options(populate_existing=True)
     )
     return result.scalars().first()
 
 
-async def _verify_customer_ownership(
-    customer_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSession
-) -> Customer:
-    result = await db.execute(
-        select(Customer).where(Customer.id == customer_id, Customer.user_id == user_id)
-    )
+async def _verify_customer_ownership(customer_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSession) -> Customer:
+    result = await db.execute(select(Customer).where(Customer.id == customer_id, Customer.user_id == user_id))
     customer = result.scalars().first()
     if customer is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
     return customer
 
 
-async def create_ledger_entry(
-    user_id: uuid.UUID, data: LedgerEntryCreate, db: AsyncSession
-) -> LedgerEntry:
+async def create_ledger_entry(user_id: uuid.UUID, data: LedgerEntryCreate, db: AsyncSession) -> LedgerEntry:
     await _verify_customer_ownership(data.customer_id, user_id, db)
 
     entry = LedgerEntry(
@@ -113,9 +104,7 @@ async def get_ledger_history(
 async def update_ledger_entry(
     entry_id: uuid.UUID, user_id: uuid.UUID, data: LedgerEntryUpdate, db: AsyncSession
 ) -> LedgerEntry:
-    result = await db.execute(
-        select(LedgerEntry).where(LedgerEntry.id == entry_id, LedgerEntry.user_id == user_id)
-    )
+    result = await db.execute(select(LedgerEntry).where(LedgerEntry.id == entry_id, LedgerEntry.user_id == user_id))
     entry = result.scalars().first()
     if entry is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ledger entry not found")

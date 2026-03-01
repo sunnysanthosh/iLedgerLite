@@ -53,6 +53,9 @@ nul
 .terraform/
 *.tfvars
 !*.tfvars.example
+# Environment-specific tfvars are safe to commit (no secrets — db_password via TF_VAR_*)
+!infrastructure/terraform/envs/*.tfvars
+
 
 # Docker
 docker-compose.override.yml

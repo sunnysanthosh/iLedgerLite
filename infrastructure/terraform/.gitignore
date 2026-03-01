@@ -1,0 +1,14 @@
+# Local state and plan files
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+
+# Terraform working directory
+.terraform/
+
+# Backup files
+*.tfvars.backup
+
+# Sensitive variable files — pass via TF_VAR_* env vars instead
+*.auto.tfvars

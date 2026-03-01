@@ -3,8 +3,6 @@ import time
 import pytest
 from httpx import AsyncClient
 
-from services.security import create_access_token, create_refresh_token
-
 REGISTER_URL = "/auth/register"
 LOGIN_URL = "/auth/login"
 ME_URL = "/auth/me"
@@ -92,9 +90,8 @@ async def test_login_nonexistent_email(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_login_inactive_user(client: AsyncClient, db_session):
-    from sqlalchemy import select, update
-
     from models.user import User
+    from sqlalchemy import update
 
     await client.post(REGISTER_URL, json={**VALID_USER, "email": "inactive@example.com"})
     await db_session.execute(update(User).where(User.email == "inactive@example.com").values(is_active=False))

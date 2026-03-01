@@ -1,15 +1,14 @@
 import uuid
 
+from config import settings
+from db import get_db
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
+from models.user import User
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-
-from config import settings
-from db import get_db
-from models.user import User
 
 bearer_scheme = HTTPBearer(auto_error=False)
 

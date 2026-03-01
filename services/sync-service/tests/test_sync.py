@@ -3,17 +3,14 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 
-import pytest
 from httpx import AsyncClient
-
 from models.account import Account
 from models.customer import Customer
-from models.transaction import Transaction
-
 
 # ---------------------------------------------------------------------------
 # Health
 # ---------------------------------------------------------------------------
+
 
 async def test_health(client: AsyncClient):
     resp = await client.get("/health")
@@ -24,6 +21,7 @@ async def test_health(client: AsyncClient):
 # ---------------------------------------------------------------------------
 # Auth required
 # ---------------------------------------------------------------------------
+
 
 async def test_endpoints_require_auth(client: AsyncClient):
     for method, url in [
@@ -38,6 +36,7 @@ async def test_endpoints_require_auth(client: AsyncClient):
 # ---------------------------------------------------------------------------
 # Push
 # ---------------------------------------------------------------------------
+
 
 async def test_push_transactions(client: AsyncClient, auth_headers: dict, seed_account: Account):
     txn_id = str(uuid.uuid4())
@@ -177,6 +176,7 @@ async def test_push_validation_missing_device_id(client: AsyncClient, auth_heade
 # Pull
 # ---------------------------------------------------------------------------
 
+
 async def test_pull_all(client: AsyncClient, auth_headers: dict, seed_server_transactions):
     resp = await client.get(
         "/sync/pull",
@@ -212,6 +212,7 @@ async def test_pull_missing_device_id(client: AsyncClient, auth_headers: dict):
 # ---------------------------------------------------------------------------
 # Status
 # ---------------------------------------------------------------------------
+
 
 async def test_status_never_synced(client: AsyncClient, auth_headers: dict):
     resp = await client.get(

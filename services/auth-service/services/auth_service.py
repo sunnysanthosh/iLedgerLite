@@ -1,16 +1,12 @@
 import uuid
 
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from redis.asyncio import Redis
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from config import settings
 from db import get_db
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from models.user import User
+from redis.asyncio import Redis
 from schemas.auth import RegisterRequest, TokenResponse
-from services.redis_client import get_redis
 from services.security import (
     create_access_token,
     create_refresh_token,
@@ -19,6 +15,8 @@ from services.security import (
     hash_password,
     verify_password,
 )
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 bearer_scheme = HTTPBearer(auto_error=False)
 

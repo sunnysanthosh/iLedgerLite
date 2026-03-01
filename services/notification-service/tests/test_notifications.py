@@ -2,19 +2,17 @@
 
 Primary test user: Rajesh (USER_RAJESH_ID) — has customers with ledger entries.
 """
-import uuid
 
-import pytest
+import uuid
 
 from shared.test_data import (
     CUST_SURESH_TEXTILES_ID,
-    USER_RAJESH_ID,
-    rajesh_headers,
     priya_headers,
+    rajesh_headers,
 )
 
-
 # ──── Health ────
+
 
 async def test_health(client):
     resp = await client.get("/health")
@@ -23,6 +21,7 @@ async def test_health(client):
 
 
 # ──── Auth required ────
+
 
 async def test_endpoints_require_auth(client):
     endpoints = [
@@ -37,6 +36,7 @@ async def test_endpoints_require_auth(client):
 
 
 # ──── List notifications ────
+
 
 async def test_list_notifications(client, seed_notifications):
     headers = rajesh_headers()
@@ -79,6 +79,7 @@ async def test_list_notifications_empty(client, seed_full_data):
 
 # ──── Mark as read ────
 
+
 async def test_mark_as_read(client, seed_notifications):
     unread = [n for n in seed_notifications if not n.is_read][0]
     headers = rajesh_headers()
@@ -95,6 +96,7 @@ async def test_mark_as_read_not_found(client, seed_full_data):
 
 
 # ──── Reminder ────
+
 
 async def test_create_reminder(client, seed_full_data):
     """Suresh Textiles has outstanding balance of 23000."""

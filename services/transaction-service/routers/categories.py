@@ -1,11 +1,10 @@
-from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from db import get_db
+from fastapi import APIRouter, Depends, Query, status
 from models.user import User
 from schemas.category import CategoryCreate, CategoryResponse
 from services.category_service import create_category, list_categories
 from services.security import get_current_user
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/categories", tags=["categories"])
 

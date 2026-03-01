@@ -4,7 +4,6 @@ from decimal import Decimal
 
 import pytest
 from httpx import AsyncClient
-
 from models.account import Account
 
 TXN_URL = "/transactions"

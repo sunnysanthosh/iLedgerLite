@@ -4,4 +4,4 @@ line-length = 120
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
-ignore = ["E501"]
+ignore = ["E501", "F821"]  # F821: false positives for SQLAlchemy relationship() string forward refs

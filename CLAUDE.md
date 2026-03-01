@@ -6,22 +6,50 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 LedgerLite is an **early-stage fintech SaaS product**. Backend microservices are under active development. Planning documents (PRDs, investor briefs, architecture blueprints) are at the root level. See `ROADMAP.md` for implementation status.
 
-**Completed:** auth-service, user-service, transaction-service, ledger-service, report-service, notification-service, ai-service, sync-service, Alembic migrations, CI/CD (test + lint + build + deploy), Flutter mobile app (auth, dashboard, transactions, accounts, ledger, reports, settings, offline sync — 43 Dart files), Kubernetes manifests (Kustomize base + staging/production overlays — 23 files)
-**In Progress:** —
-**Not Started:** Terraform IaC (6C); web dashboard
+**Completed:** auth-service, user-service, transaction-service, ledger-service, report-service, notification-service, ai-service, sync-service, Alembic migrations, CI/CD (test + lint + build + deploy), Flutter mobile app (auth, dashboard, transactions, accounts, ledger, reports, settings, offline sync — 43 Dart files), Kubernetes manifests (Kustomize base + staging/production overlays — 23 files), Next.js web dashboard (6 tabs), Terraform IaC for GCP (6 modules — vpc, gke, cloudsql, memorystore, storage, iam)
+**In Progress:** Sprint 6C deployment to GCP staging (`sprint-6c/terraform-gcp` branch)
+**Not Started:** —
+
+## Python Environment
+
+**Always use the project virtual environment. Never install packages globally.**
+
+```bash
+# First-time setup (project root)
+python -m venv .venv                        # Python version pinned via .python-version (3.12.7)
+source .venv/bin/activate                   # activate (Mac/Linux)
+# .venv is git-ignored; .python-version is committed
+
+# Install deps for a specific service into the active venv
+pip install -r services/<name>-service/requirements.txt
+
+# Or install all service deps at once (for IDE support / running all tests locally)
+for req in services/*/requirements.txt; do pip install -r "$req"; done
+
+# Deactivate when done
+deactivate
+```
+
+**Rules:**
+- `.venv/` is in `.gitignore` — never commit it.
+- `.python-version` is committed — pyenv uses it to select Python 3.12.7 automatically.
+- CI uses per-service fresh venvs (no shared state between service test runs).
+- `pip install` outside an activated venv is forbidden.
 
 ## Build & Run Commands
 
 ```bash
-# Start all services + Postgres + Redis
+# Start all services + Postgres + Redis (Docker — no venv needed)
 docker compose up --build
 
-# Start a single service for development
+# Start a single service for development (requires activated venv)
+source .venv/bin/activate
 cd services/<name>-service
 pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 
-# Run tests for a single service
+# Run tests for a single service (requires activated venv)
+source .venv/bin/activate
 cd services/<name>-service
 python -m pytest tests/ -v
 
@@ -137,9 +165,19 @@ tests/test_<entity>.py        # Test cases
 
 ## CI/CD
 
+**Non-negotiable rules — these apply in every session, no exceptions:**
+1. **Never commit directly to `main`.** All work happens on a sprint branch.
+2. **`main` must always be green.** No merge unless all CI checks pass.
+3. **No `--no-verify`, no skipping hooks.** Fix the root cause instead.
+4. **Baseline (tag) `main` at every sprint merge:** `git tag sprint-<N>-done`.
+5. **Test locally before pushing.** Run the relevant test suite before every push.
+6. **Secrets never in code or tfvars.** Pass via `TF_VAR_*` env vars or GCP Secret Manager.
+
 **GitHub Actions workflows (`.github/workflows/`):**
 - `test.yml` — runs on push/PR to main. Uses `dorny/paths-filter` for change detection, then runs `pytest` only for modified services. SQLite test backend (no Postgres needed in CI).
 - `lint.yml` — runs `ruff check` and `ruff format --check` across all services.
+- `build.yml` — Docker build + push to GHCR (per-service, change detection).
+- `deploy.yml` — manual deploy to staging/production via kubectl.
 
 **Linting:**
 - Config: `pyproject.toml` at repo root (ruff, Python 3.12 target, line-length 120).
@@ -170,24 +208,36 @@ main                          ← stable, always passing tests
 
 ### Rules
 
-1. **`main` is protected.** All tests must pass before merging. Never commit directly to `main`.
+1. **`main` is protected.** All tests must pass before merging. Never commit directly to `main`. Ever.
 2. **One branch per sprint.** Named `sprint-<N>/<short-description>` (e.g., `sprint-5/sync-ai`). Retros use `retro-<N>/<description>`.
 3. **Branch from `main` at sprint start.** This guarantees a clean, tested baseline.
 4. **Merge to `main` at sprint end.** After all tests pass and docs are updated, merge (squash or regular) and tag: `git tag sprint-<N>-done`.
 5. **Hotfix branches.** For urgent fixes between sprints: `hotfix/<description>`, branch from `main`, merge back to `main`.
+6. **Baseline tagging.** Tag `main` after every sprint merge and every significant milestone. Tags are permanent baselines — never delete them.
+7. **PR before merge.** Even solo — open a PR, let CI run, then merge. This keeps the audit trail clean.
 
 ### Commands
 
 ```bash
 # Start a new sprint
 git checkout main
-git pull                      # if remote exists
-git checkout -b sprint-5/sync-ai
+git pull
+git checkout -b sprint-<N>/<description>
 
-# End a sprint — merge to main
+# Before pushing — always run tests first
+source .venv/bin/activate
+for dir in services/*-service; do (cd "$dir" && python -m pytest tests/ -v --tb=short); done
+
+# Push branch and open PR
+git push -u origin sprint-<N>/<description>
+gh pr create --title "Sprint <N>: <description>" --body "..."
+
+# End a sprint — merge to main only after CI passes
 git checkout main
-git merge sprint-5/sync-ai   # or: git merge --squash sprint-5/sync-ai
-git tag sprint-5-done
+git pull
+git merge sprint-<N>/<description>
+git tag sprint-<N>-done
+git push && git push --tags
 ```
 
 ## Sprint Workflow

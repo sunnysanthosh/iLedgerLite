@@ -3,18 +3,17 @@ from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 
 import pytest
+from config import settings
 from httpx import ASGITransport, AsyncClient
 from jose import jwt
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
-from config import settings
-from models.base import Base
-from models.user import User
 from models.account import Account  # noqa: F401 — register with Base
+from models.base import Base
 from models.category import Category  # noqa: F401
 from models.customer import Customer  # noqa: F401
 from models.ledger_entry import LedgerEntry  # noqa: F401
 from models.transaction import Transaction  # noqa: F401
+from models.user import User
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 engine = create_async_engine(TEST_DB_URL, echo=False)
@@ -101,51 +100,93 @@ def auth_headers(seed_user: User) -> dict:
 async def seed_full_data(db_session: AsyncSession):
     """Seed all shared test data into the report-service test DB."""
     from shared.test_data import (
-        ACCOUNTS, ALL_CATEGORIES, CUSTOMERS, LEDGER_ENTRIES, TRANSACTIONS, USERS,
+        ACCOUNTS,
+        ALL_CATEGORIES,
+        CUSTOMERS,
+        LEDGER_ENTRIES,
+        TRANSACTIONS,
+        USERS,
     )
 
     for u in USERS:
-        db_session.add(User(
-            id=_id(u["id"]), email=u["email"], password_hash=u["password_hash"],
-            full_name=u["full_name"], phone=u["phone"], is_active=u["is_active"],
-        ))
+        db_session.add(
+            User(
+                id=_id(u["id"]),
+                email=u["email"],
+                password_hash=u["password_hash"],
+                full_name=u["full_name"],
+                phone=u["phone"],
+                is_active=u["is_active"],
+            )
+        )
         await db_session.flush()
 
     for a in ACCOUNTS:
-        db_session.add(Account(
-            id=_id(a["id"]), user_id=_id(a["user_id"]), name=a["name"],
-            type=a["type"], currency=a["currency"],
-            balance=a["balance"], is_active=a["is_active"],
-        ))
+        db_session.add(
+            Account(
+                id=_id(a["id"]),
+                user_id=_id(a["user_id"]),
+                name=a["name"],
+                type=a["type"],
+                currency=a["currency"],
+                balance=a["balance"],
+                is_active=a["is_active"],
+            )
+        )
         await db_session.flush()
 
     for c in ALL_CATEGORIES:
-        db_session.add(Category(
-            id=_id(c["id"]), user_id=_id(c["user_id"]), name=c["name"],
-            type=c["type"], icon=c["icon"], is_system=c["is_system"],
-        ))
+        db_session.add(
+            Category(
+                id=_id(c["id"]),
+                user_id=_id(c["user_id"]),
+                name=c["name"],
+                type=c["type"],
+                icon=c["icon"],
+                is_system=c["is_system"],
+            )
+        )
         await db_session.flush()
 
     for t in TRANSACTIONS:
-        db_session.add(Transaction(
-            id=_id(t["id"]), user_id=_id(t["user_id"]), account_id=_id(t["account_id"]),
-            category_id=_id(t["category_id"]), type=t["type"],
-            amount=t["amount"], description=t["description"],
-            transaction_date=t["transaction_date"],
-        ))
+        db_session.add(
+            Transaction(
+                id=_id(t["id"]),
+                user_id=_id(t["user_id"]),
+                account_id=_id(t["account_id"]),
+                category_id=_id(t["category_id"]),
+                type=t["type"],
+                amount=t["amount"],
+                description=t["description"],
+                transaction_date=t["transaction_date"],
+            )
+        )
         await db_session.flush()
 
     for c in CUSTOMERS:
-        db_session.add(Customer(
-            id=_id(c["id"]), user_id=_id(c["user_id"]), name=c["name"],
-            phone=c["phone"], email=c["email"], address=c["address"],
-        ))
+        db_session.add(
+            Customer(
+                id=_id(c["id"]),
+                user_id=_id(c["user_id"]),
+                name=c["name"],
+                phone=c["phone"],
+                email=c["email"],
+                address=c["address"],
+            )
+        )
         await db_session.flush()
 
     for e in LEDGER_ENTRIES:
-        db_session.add(LedgerEntry(
-            id=_id(e["id"]), user_id=_id(e["user_id"]), customer_id=_id(e["customer_id"]),
-            type=e["type"], amount=e["amount"], description=e["description"],
-            due_date=e["due_date"], is_settled=e["is_settled"],
-        ))
+        db_session.add(
+            LedgerEntry(
+                id=_id(e["id"]),
+                user_id=_id(e["user_id"]),
+                customer_id=_id(e["customer_id"]),
+                type=e["type"],
+                amount=e["amount"],
+                description=e["description"],
+                due_date=e["due_date"],
+                is_settled=e["is_settled"],
+            )
+        )
         await db_session.flush()

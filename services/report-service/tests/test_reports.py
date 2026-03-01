@@ -3,27 +3,16 @@
 Primary test user: Rajesh (USER_RAJESH_ID) — has both transactions AND ledger entries.
 Secondary: Priya (USER_PRIYA_ID) — transactions only, no ledger.
 """
+
 from decimal import Decimal
 
-import pytest
-
 from shared.test_data import (
-    USER_PRIYA_ID,
-    USER_RAJESH_ID,
-    ANCHOR_DATE,
-    get_transactions_for_user,
-    get_customers_for_user,
-    get_ledger_entries_for_customer,
-    get_outstanding_balance,
-    get_accounts_for_user,
-    make_auth_headers,
-    rajesh_headers,
     priya_headers,
-    ALL_CATEGORIES,
+    rajesh_headers,
 )
 
-
 # ──── Health ────
+
 
 async def test_health(client):
     resp = await client.get("/health")
@@ -33,6 +22,7 @@ async def test_health(client):
 
 # ──── Auth required ────
 
+
 async def test_reports_require_auth(client):
     endpoints = ["/reports/profit-loss", "/reports/cashflow", "/reports/budget", "/reports/summary", "/reports/export"]
     for ep in endpoints:
@@ -41,6 +31,7 @@ async def test_reports_require_auth(client):
 
 
 # ──── Profit & Loss ────
+
 
 async def test_profit_loss_rajesh(client, seed_full_data):
     """Rajesh: income=141000, expense=152000 (includes transfer=20000 as transfer type)."""
@@ -91,6 +82,7 @@ async def test_profit_loss_empty_range(client, seed_full_data):
 
 
 # ──── Cashflow ────
+
 
 async def test_cashflow_monthly(client, seed_full_data):
     """Rajesh's transactions span ~90 days, should produce multiple monthly buckets."""
@@ -145,6 +137,7 @@ async def test_cashflow_invalid_period(client, seed_full_data):
 
 # ──── Budget ────
 
+
 async def test_budget_report_rajesh(client, seed_full_data):
     """Rajesh has 7 expense categories totaling 152000."""
     headers = rajesh_headers()
@@ -188,6 +181,7 @@ async def test_budget_empty_range(client, seed_full_data):
 
 # ──── Summary ────
 
+
 async def test_summary_rajesh(client, seed_full_data):
     """Rajesh: 3 active accounts, 18 txns, has ledger receivables."""
     headers = rajesh_headers()
@@ -227,6 +221,7 @@ async def test_summary_no_data(client, auth_headers):
 
 
 # ──── Export ────
+
 
 async def test_export_csv_rajesh(client, seed_full_data):
     """Rajesh has 18 transactions total; wide range should export all."""
