@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: ledger-service
-          image: ghcr.io/sunnysans/ledgerlite/ledger-service:latest
+          image: ghcr.io/sunnysanthosh/ledgerlite/ledger-service:latest
           ports:
             - containerPort: 8000
               name: http

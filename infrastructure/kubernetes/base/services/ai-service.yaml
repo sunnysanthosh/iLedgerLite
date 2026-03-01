@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: ai-service
-          image: ghcr.io/sunnysans/ledgerlite/ai-service:latest
+          image: ghcr.io/sunnysanthosh/ledgerlite/ai-service:latest
           ports:
             - containerPort: 8000
               name: http

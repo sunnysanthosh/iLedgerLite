@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: user-service
-          image: ghcr.io/sunnysans/ledgerlite/user-service:latest
+          image: ghcr.io/sunnysanthosh/ledgerlite/user-service:latest
           ports:
             - containerPort: 8000
               name: http

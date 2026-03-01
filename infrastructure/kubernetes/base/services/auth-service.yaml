@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: auth-service
-          image: ghcr.io/sunnysans/ledgerlite/auth-service:latest
+          image: ghcr.io/sunnysanthosh/ledgerlite/auth-service:latest
           ports:
             - containerPort: 8000
               name: http

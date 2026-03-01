@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: transaction-service
-          image: ghcr.io/sunnysans/ledgerlite/transaction-service:latest
+          image: ghcr.io/sunnysanthosh/ledgerlite/transaction-service:latest
           ports:
             - containerPort: 8000
               name: http

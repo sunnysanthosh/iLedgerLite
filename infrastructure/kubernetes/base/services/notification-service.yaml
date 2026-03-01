@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: notification-service
-          image: ghcr.io/sunnysans/ledgerlite/notification-service:latest
+          image: ghcr.io/sunnysanthosh/ledgerlite/notification-service:latest
           ports:
             - containerPort: 8000
               name: http

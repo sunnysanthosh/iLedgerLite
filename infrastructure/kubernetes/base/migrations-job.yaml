@@ -17,7 +17,7 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: migrations
-          image: ghcr.io/sunnysans/ledgerlite/migrations:latest
+          image: ghcr.io/sunnysanthosh/ledgerlite/migrations:latest
           env:
             - name: ALEMBIC_DATABASE_URL
               valueFrom:

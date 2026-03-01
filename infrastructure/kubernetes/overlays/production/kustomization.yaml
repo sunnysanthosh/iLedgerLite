@@ -57,7 +57,7 @@ patches:
           spec:
             containers:
               - name: auth-service
-                image: ghcr.io/sunnysans/ledgerlite/auth-service:production
+                image: ghcr.io/sunnysanthosh/ledgerlite/auth-service:production
   - patch: |
       apiVersion: apps/v1
       kind: Deployment
@@ -68,7 +68,7 @@ patches:
           spec:
             containers:
               - name: user-service
-                image: ghcr.io/sunnysans/ledgerlite/user-service:production
+                image: ghcr.io/sunnysanthosh/ledgerlite/user-service:production
   - patch: |
       apiVersion: apps/v1
       kind: Deployment
@@ -79,7 +79,7 @@ patches:
           spec:
             containers:
               - name: transaction-service
-                image: ghcr.io/sunnysans/ledgerlite/transaction-service:production
+                image: ghcr.io/sunnysanthosh/ledgerlite/transaction-service:production
   - patch: |
       apiVersion: apps/v1
       kind: Deployment
@@ -90,7 +90,7 @@ patches:
           spec:
             containers:
               - name: ledger-service
-                image: ghcr.io/sunnysans/ledgerlite/ledger-service:production
+                image: ghcr.io/sunnysanthosh/ledgerlite/ledger-service:production
   - patch: |
       apiVersion: apps/v1
       kind: Deployment
@@ -101,7 +101,7 @@ patches:
           spec:
             containers:
               - name: report-service
-                image: ghcr.io/sunnysans/ledgerlite/report-service:production
+                image: ghcr.io/sunnysanthosh/ledgerlite/report-service:production
   - patch: |
       apiVersion: apps/v1
       kind: Deployment
@@ -112,7 +112,7 @@ patches:
           spec:
             containers:
               - name: ai-service
-                image: ghcr.io/sunnysans/ledgerlite/ai-service:production
+                image: ghcr.io/sunnysanthosh/ledgerlite/ai-service:production
   - patch: |
       apiVersion: apps/v1
       kind: Deployment
@@ -123,7 +123,7 @@ patches:
           spec:
             containers:
               - name: notification-service
-                image: ghcr.io/sunnysans/ledgerlite/notification-service:production
+                image: ghcr.io/sunnysanthosh/ledgerlite/notification-service:production
   - patch: |
       apiVersion: apps/v1
       kind: Deployment
@@ -134,4 +134,4 @@ patches:
           spec:
             containers:
               - name: sync-service
-                image: ghcr.io/sunnysans/ledgerlite/sync-service:production
+                image: ghcr.io/sunnysanthosh/ledgerlite/sync-service:production
