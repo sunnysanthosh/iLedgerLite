@@ -71,6 +71,15 @@ module "gke" {
   depends_on           = [module.vpc, module.iam]
 }
 
+# Workload Identity binding: must run AFTER GKE cluster creates the identity pool.
+# Cannot live in module.iam because module.gke depends_on module.iam (would be circular).
+resource "google_service_account_iam_member" "workload_identity" {
+  service_account_id = module.iam.app_service_account_id
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "serviceAccount:${var.project_id}.svc.id.goog[ledgerlite/ledgerlite-app]"
+  depends_on         = [module.gke]
+}
+
 module "cloudsql" {
   source      = "./modules/cloudsql"
   project_id  = var.project_id
