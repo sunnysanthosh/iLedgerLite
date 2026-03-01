@@ -6,6 +6,13 @@ on:
     paths:
       - "services/**"
       - "docker-compose.yml"
+  workflow_dispatch:
+    inputs:
+      services:
+        description: "Services to build (comma-separated, or 'all')"
+        required: false
+        default: "all"
+        type: string
 
 env:
   REGISTRY: ghcr.io
@@ -22,15 +29,26 @@ jobs:
       - name: Detect changed services
         id: changed
         run: |
-          SERVICES=""
-          for svc in auth-service user-service transaction-service ledger-service report-service ai-service notification-service sync-service; do
-            if git diff --name-only HEAD~1 HEAD | grep -q "services/$svc/"; then
-              SERVICES="$SERVICES $svc"
+          ALL="auth-service user-service transaction-service ledger-service report-service ai-service notification-service sync-service"
+          # Manual dispatch: honour the input (default = all)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            INPUT="${{ inputs.services }}"
+            if [ "$INPUT" = "all" ] || [ -z "$INPUT" ]; then
+              SERVICES="$ALL"
+            else
+              SERVICES=$(echo "$INPUT" | tr ',' ' ')
             fi
-          done
-          # On first push or if detection fails, build all
-          if [ -z "$SERVICES" ]; then
-            SERVICES="auth-service user-service transaction-service ledger-service report-service ai-service notification-service sync-service"
+          else
+            SERVICES=""
+            for svc in $ALL; do
+              if git diff --name-only HEAD~1 HEAD | grep -q "services/$svc/"; then
+                SERVICES="$SERVICES $svc"
+              fi
+            done
+            # On first push or if detection fails, build all
+            if [ -z "$SERVICES" ]; then
+              SERVICES="$ALL"
+            fi
           fi
           echo "services=$(echo $SERVICES | jq -R -c 'split(" ") | map(select(length > 0))')" >> "$GITHUB_OUTPUT"
 

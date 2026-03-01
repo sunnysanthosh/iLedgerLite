@@ -52,17 +52,16 @@ patches:
       kind: Service
       name: postgres
 
-  # Staging secrets — replace CLOUD_SQL_PRIVATE_IP with: terraform output cloudsql_private_ip
+  # Staging secrets — real values applied via kubectl (NOT committed to git).
+  # Run: infrastructure/kubernetes/overlays/staging/apply-secrets.sh
+  # Cloud SQL private IP: 10.82.0.3 (terraform output cloudsql_private_ip)
   - patch: |
       apiVersion: v1
       kind: Secret
       metadata:
         name: ledgerlite-secrets
       stringData:
-        JWT_SECRET: "staging-secret-change-me"
-        DATABASE_USER: "ledgerlite"
-        DATABASE_PASSWORD: "ledgerlite-staging"
-        DATABASE_URL: "postgresql+asyncpg://ledgerlite:ledgerlite-staging@CLOUD_SQL_PRIVATE_IP:5432/ledgerlite"
+        DATABASE_URL: "postgresql+asyncpg://ledgerlite:REPLACE_WITH_DB_PASSWORD@10.82.0.3:5432/ledgerlite"
         REDIS_URL: "redis://redis:6379"
 
   # Staging image tags
@@ -76,7 +75,7 @@ patches:
           spec:
             containers:
               - name: auth-service
-                image: ghcr.io/sunnysans/ledgerlite/auth-service:staging
+                image: ghcr.io/sunnysanthosh/ledgerlite/auth-service:latest
   - patch: |
       apiVersion: apps/v1
       kind: Deployment
@@ -87,7 +86,7 @@ patches:
           spec:
             containers:
               - name: user-service
-                image: ghcr.io/sunnysans/ledgerlite/user-service:staging
+                image: ghcr.io/sunnysanthosh/ledgerlite/user-service:latest
   - patch: |
       apiVersion: apps/v1
       kind: Deployment
@@ -98,7 +97,7 @@ patches:
           spec:
             containers:
               - name: transaction-service
-                image: ghcr.io/sunnysans/ledgerlite/transaction-service:staging
+                image: ghcr.io/sunnysanthosh/ledgerlite/transaction-service:latest
   - patch: |
       apiVersion: apps/v1
       kind: Deployment
@@ -109,7 +108,7 @@ patches:
           spec:
             containers:
               - name: ledger-service
-                image: ghcr.io/sunnysans/ledgerlite/ledger-service:staging
+                image: ghcr.io/sunnysanthosh/ledgerlite/ledger-service:latest
   - patch: |
       apiVersion: apps/v1
       kind: Deployment
@@ -120,7 +119,7 @@ patches:
           spec:
             containers:
               - name: report-service
-                image: ghcr.io/sunnysans/ledgerlite/report-service:staging
+                image: ghcr.io/sunnysanthosh/ledgerlite/report-service:latest
   - patch: |
       apiVersion: apps/v1
       kind: Deployment
@@ -131,7 +130,7 @@ patches:
           spec:
             containers:
               - name: ai-service
-                image: ghcr.io/sunnysans/ledgerlite/ai-service:staging
+                image: ghcr.io/sunnysanthosh/ledgerlite/ai-service:latest
   - patch: |
       apiVersion: apps/v1
       kind: Deployment
@@ -142,7 +141,7 @@ patches:
           spec:
             containers:
               - name: notification-service
-                image: ghcr.io/sunnysans/ledgerlite/notification-service:staging
+                image: ghcr.io/sunnysanthosh/ledgerlite/notification-service:latest
   - patch: |
       apiVersion: apps/v1
       kind: Deployment
@@ -153,4 +152,4 @@ patches:
           spec:
             containers:
               - name: sync-service
-                image: ghcr.io/sunnysans/ledgerlite/sync-service:staging
+                image: ghcr.io/sunnysanthosh/ledgerlite/sync-service:latest
