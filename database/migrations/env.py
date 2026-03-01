@@ -15,8 +15,10 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Allow env var override for the database URL
+# Allow env var override for the database URL.
+# Normalise to a sync driver: strip +asyncpg so psycopg2 is used instead.
 db_url = os.environ.get("ALEMBIC_DATABASE_URL", config.get_main_option("sqlalchemy.url"))
+db_url = db_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
 
 target_metadata = None
 
