@@ -17,7 +17,9 @@ resource "google_sql_database_instance" "postgres" {
     ip_configuration {
       ipv4_enabled    = false
       private_network = var.network_id
-      ssl_mode        = "ENCRYPTED_ONLY"
+      # staging: allow unencrypted connections on private VPC (no external exposure)
+      # production: set ENCRYPTED_ONLY
+      ssl_mode        = var.env == "production" ? "ENCRYPTED_ONLY" : "ALLOW_UNENCRYPTED_AND_ENCRYPTED"
     }
 
     backup_configuration {
