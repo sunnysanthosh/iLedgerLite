@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: ledgerlite-quota
+  namespace: ledgerlite
+spec:
+  hard:
+    # CPU: 8 services × 50m request = 400m base; 400m headroom for bursts
+    requests.cpu: "800m"
+    limits.cpu: "4"
+    # Memory: 8 services × 64Mi request = 512Mi base; 512Mi headroom
+    requests.memory: "1Gi"
+    limits.memory: "4Gi"
+    # Pod count: 8 services + postgres + redis + migrations + HPA headroom
+    pods: "40"
+    services: "20"
+    persistentvolumeclaims: "10"

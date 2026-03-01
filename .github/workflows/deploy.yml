@@ -1,5 +1,20 @@
 name: Deploy
 
+# Prerequisites — add these secrets to each GitHub Environment (staging / production):
+#   Settings → Environments → [env name] → Environment secrets
+#
+#   KUBECONFIG   : base64-encoded kubeconfig for the target GKE cluster
+#                  gcloud container clusters get-credentials ledgerlite-staging \
+#                    --region us-central1 --project <project-id> \
+#                    && cat ~/.kube/config | base64 | pbcopy
+#   DB_PASSWORD  : Cloud SQL ledgerlite user password
+#   JWT_SECRET   : HS256 JWT signing secret (shared across all 8 services)
+#   DATABASE_URL : full asyncpg URL, e.g.
+#                  postgresql+asyncpg://ledgerlite:<pw>@10.82.0.3:5432/ledgerlite
+#
+# Create GitHub Environments: repo Settings → Environments → New environment.
+# Add required reviewers on "production" for an approval gate before every prod deploy.
+
 on:
   workflow_dispatch:
     inputs:
@@ -47,15 +62,25 @@ jobs:
         run: |
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
 
-      - name: Run Alembic migrations
+      - name: Apply real secrets
+        # Idempotent upsert: --dry-run=client + apply avoids clobbering existing data.
+        # Runs before image rollout so pods restart with correct env vars.
         run: |
-          echo "--- Running database migrations for ${{ inputs.environment }} ---"
-          # Migrations run via a Kubernetes Job or direct connection
-          # kubectl apply -f infrastructure/kubernetes/migrations-job.yaml
-          echo "Migrations would run here against the ${{ inputs.environment }} database"
+          NAMESPACE="ledgerlite-${{ inputs.environment }}"
+          kubectl create secret generic ledgerlite-secrets \
+            --namespace="${NAMESPACE}" \
+            --from-literal=DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            --from-literal=DATABASE_USER="ledgerlite" \
+            --from-literal=DATABASE_PASSWORD="${{ secrets.DB_PASSWORD }}" \
+            --from-literal=REDIS_URL="redis://redis:6379" \
+            --from-literal=JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+            --save-config \
+            --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Deploy services
+        id: deploy
         run: |
           NAMESPACE="ledgerlite-${{ inputs.environment }}"
           TAG="${{ github.sha }}"
@@ -63,21 +88,67 @@ jobs:
 
           for SERVICE in ${{ steps.services.outputs.list }}; do
             IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${SERVICE}:${SHORT_SHA}"
-            echo "--- Deploying ${SERVICE} with image ${IMAGE} ---"
+            echo "--- Deploying ${SERVICE} → ${IMAGE} ---"
 
             kubectl set image "deployment/${SERVICE}" \
               "${SERVICE}=${IMAGE}" \
-              -n "${NAMESPACE}" \
-              --record 2>/dev/null || echo "Deployment ${SERVICE} not found in ${NAMESPACE} — skipping"
+              -n "${NAMESPACE}" 2>/dev/null \
+              || { echo "::warning::Deployment ${SERVICE} not found in ${NAMESPACE} — skipping"; continue; }
 
             kubectl rollout status "deployment/${SERVICE}" \
               -n "${NAMESPACE}" \
-              --timeout=120s 2>/dev/null || echo "Rollout status check skipped for ${SERVICE}"
+              --timeout=180s \
+              || { echo "::error::Rollout timed out for ${SERVICE}"; exit 1; }
           done
 
-      - name: Verify deployments
+      - name: Smoke test — all services healthy
+        id: smoke
+        if: steps.deploy.outcome == 'success'
         run: |
           NAMESPACE="ledgerlite-${{ inputs.environment }}"
-          echo "--- Deployment status in ${NAMESPACE} ---"
-          kubectl get deployments -n "${NAMESPACE}" 2>/dev/null || echo "Namespace ${NAMESPACE} not found"
-          kubectl get pods -n "${NAMESPACE}" 2>/dev/null || echo "No pods found"
+          ALL_SERVICES="auth-service user-service transaction-service ledger-service report-service ai-service notification-service sync-service"
+          FAILED=""
+
+          for SERVICE in $ALL_SERVICES; do
+            POD=$(kubectl get pods -n "${NAMESPACE}" \
+              -l "app.kubernetes.io/name=${SERVICE}" \
+              --field-selector=status.phase=Running \
+              -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+            if [ -z "${POD}" ]; then
+              echo "::warning::No running pod found for ${SERVICE} — skipping smoke test"
+              continue
+            fi
+            STATUS=$(kubectl exec "${POD}" -n "${NAMESPACE}" -- \
+              wget -qO- --timeout=5 http://localhost:8000/health 2>/dev/null || echo "UNREACHABLE")
+            if echo "${STATUS}" | grep -q '"status"'; then
+              echo "✅ ${SERVICE}: healthy"
+            else
+              echo "::error::${SERVICE} /health check failed — response: ${STATUS}"
+              FAILED="${FAILED} ${SERVICE}"
+            fi
+          done
+
+          if [ -n "${FAILED}" ]; then
+            echo "failed=${FAILED}" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+      - name: Auto-rollback on smoke test failure
+        if: failure() && steps.smoke.outcome == 'failure'
+        run: |
+          NAMESPACE="ledgerlite-${{ inputs.environment }}"
+          echo "::warning::Smoke test failed — rolling back deployed services"
+          for SERVICE in ${{ steps.services.outputs.list }}; do
+            kubectl rollout undo "deployment/${SERVICE}" -n "${NAMESPACE}" 2>/dev/null \
+              && echo "↩️  Rolled back ${SERVICE}" \
+              || echo "::warning::Rollback skipped for ${SERVICE}"
+          done
+
+      - name: Verify final state
+        if: always()
+        run: |
+          NAMESPACE="ledgerlite-${{ inputs.environment }}"
+          echo "--- Deployments ---"
+          kubectl get deployments -n "${NAMESPACE}" -o wide 2>/dev/null || echo "Namespace ${NAMESPACE} not accessible"
+          echo "--- Pods ---"
+          kubectl get pods -n "${NAMESPACE}" 2>/dev/null || true

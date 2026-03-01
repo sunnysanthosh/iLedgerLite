@@ -22,7 +22,10 @@ patches:
           app.kubernetes.io/part-of: ledgerlite
           environment: staging
 
-  # Staging ingress host
+  # Staging ingress: set hostname + enable TLS via cert-manager (letsencrypt-staging issuer)
+  # Prerequisites:
+  #   1. kubectl apply -f infrastructure/kubernetes/cert-manager/cluster-issuer.yaml
+  #   2. nginx-ingress controller must be installed in the cluster
   - patch: |
       - op: replace
         path: /spec/rules/0/host
@@ -30,6 +33,20 @@ patches:
     target:
       kind: Ingress
       name: ledgerlite-ingress
+
+  - patch: |
+      apiVersion: networking.k8s.io/v1
+      kind: Ingress
+      metadata:
+        name: ledgerlite-ingress
+        annotations:
+          cert-manager.io/cluster-issuer: letsencrypt-staging
+          nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      spec:
+        tls:
+          - hosts:
+              - api.staging.ledgerlite.app
+            secretName: ledgerlite-tls-staging
 
   # Remove in-cluster Postgres — staging uses Cloud SQL (managed, persistent)
   # After terraform apply, get the IP: terraform output cloudsql_private_ip

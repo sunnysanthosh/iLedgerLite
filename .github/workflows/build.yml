@@ -89,6 +89,15 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+      - name: Scan image for vulnerabilities (Trivy)
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.service }}:latest
+          format: table
+          exit-code: "0"        # warn-only; don't fail on unfixed base-image CVEs
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
   build-migrations:
     runs-on: ubuntu-latest
     permissions:
