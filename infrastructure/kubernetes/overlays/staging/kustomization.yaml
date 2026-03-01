@@ -52,16 +52,15 @@ patches:
       kind: Service
       name: postgres
 
-  # Staging secrets — real values applied via kubectl (NOT committed to git).
-  # Run: infrastructure/kubernetes/overlays/staging/apply-secrets.sh
-  # Cloud SQL private IP: 10.82.0.3 (terraform output cloudsql_private_ip)
+  # Staging secrets — sensitive values (DATABASE_URL, JWT_SECRET, DATABASE_PASSWORD)
+  # are applied out-of-band via apply-secrets.sh and must NOT appear here.
+  # Only non-sensitive overrides that differ from the base go below.
   - patch: |
       apiVersion: v1
       kind: Secret
       metadata:
         name: ledgerlite-secrets
       stringData:
-        DATABASE_URL: "postgresql+asyncpg://ledgerlite:REPLACE_WITH_DB_PASSWORD@10.82.0.3:5432/ledgerlite"
         REDIS_URL: "redis://redis:6379"
 
   # Staging image tags
