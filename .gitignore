@@ -55,6 +55,9 @@ nul
 !*.tfvars.example
 # Environment-specific tfvars are safe to commit (no secrets — db_password via TF_VAR_*)
 !infrastructure/terraform/envs/*.tfvars
+# Terraform plan files — may contain sensitive resource data
+tfplan
+*.tfplan
 
 
 # Docker
