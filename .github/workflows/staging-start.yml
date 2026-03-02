@@ -1,0 +1,117 @@
+name: Staging — Start
+
+on:
+  workflow_dispatch:
+    inputs:
+      node_count:
+        description: "Number of GKE nodes to restore"
+        required: false
+        default: "3"
+  # Also callable from deploy.yml so a push can warm staging automatically
+  workflow_call:
+    inputs:
+      node_count:
+        type: string
+        required: false
+        default: "3"
+
+env:
+  PROJECT_ID: project-6737f3c2-e011-49b7-ae4
+  REGION: us-central1
+  CLUSTER: ledgerlite-staging
+  NODE_POOL: ledgerlite-staging-nodes
+  SQL_INSTANCE: ledgerlite-staging-pg
+  NAMESPACE: ledgerlite-staging
+
+jobs:
+  start:
+    name: Start staging GKE + Cloud SQL
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      # -----------------------------------------------------------------------
+      # 1. Wake Cloud SQL (activation-policy=ALWAYS)
+      # -----------------------------------------------------------------------
+      - name: Start Cloud SQL
+        run: |
+          echo "Starting Cloud SQL instance ${{ env.SQL_INSTANCE }}..."
+          gcloud sql instances patch "${{ env.SQL_INSTANCE }}" \
+            --activation-policy=ALWAYS \
+            --project="${{ env.PROJECT_ID }}"
+
+          # Wait until SQL is RUNNABLE (max 3 min)
+          for i in $(seq 1 18); do
+            STATE=$(gcloud sql instances describe "${{ env.SQL_INSTANCE }}" \
+              --project="${{ env.PROJECT_ID }}" \
+              --format="value(state)" 2>/dev/null)
+            echo "  Cloud SQL state: ${STATE} (attempt ${i}/18)"
+            if [ "${STATE}" = "RUNNABLE" ]; then
+              echo "✅ Cloud SQL is RUNNABLE"
+              break
+            fi
+            sleep 10
+          done
+          if [ "${STATE}" != "RUNNABLE" ]; then
+            echo "❌ Cloud SQL did not reach RUNNABLE state in time" && exit 1
+          fi
+
+      # -----------------------------------------------------------------------
+      # 2. Scale GKE node pool back up
+      # -----------------------------------------------------------------------
+      - name: Scale GKE node pool up
+        run: |
+          NODE_COUNT="${{ inputs.node_count }}"
+          echo "Scaling node pool ${{ env.NODE_POOL }} to ${NODE_COUNT} node(s)..."
+          gcloud container clusters resize "${{ env.CLUSTER }}" \
+            --node-pool "${{ env.NODE_POOL }}" \
+            --num-nodes "${NODE_COUNT}" \
+            --region "${{ env.REGION }}" \
+            --project "${{ env.PROJECT_ID }}" \
+            --quiet
+
+      # -----------------------------------------------------------------------
+      # 3. Get cluster credentials and wait for nodes to be Ready
+      # -----------------------------------------------------------------------
+      - name: Get GKE credentials
+        run: |
+          gcloud container clusters get-credentials "${{ env.CLUSTER }}" \
+            --region "${{ env.REGION }}" \
+            --project "${{ env.PROJECT_ID }}"
+
+      - name: Wait for nodes ready
+        run: |
+          echo "Waiting for GKE nodes to be Ready (max 5 min)..."
+          kubectl wait nodes \
+            --all \
+            --for=condition=Ready \
+            --timeout=300s
+
+      # -----------------------------------------------------------------------
+      # 4. Restart any pods in CrashLoopBackOff / Pending from prior stop
+      # -----------------------------------------------------------------------
+      - name: Restart evicted / pending pods
+        run: |
+          echo "Rolling restart of all deployments in ${{ env.NAMESPACE }}..."
+          kubectl rollout restart deployment \
+            --namespace="${{ env.NAMESPACE }}" 2>/dev/null || true
+
+          echo "Waiting for all deployments to finish rollout..."
+          kubectl rollout status deployment \
+            --namespace="${{ env.NAMESPACE }}" \
+            --timeout=180s 2>/dev/null || true
+
+      - name: Verify all pods running
+        run: |
+          echo "Pod status in ${{ env.NAMESPACE }}:"
+          kubectl get pods -n "${{ env.NAMESPACE }}"

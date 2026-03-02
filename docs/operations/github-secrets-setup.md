@@ -70,3 +70,80 @@ After this, every `kubectl apply -k infrastructure/kubernetes/overlays/staging` 
 - Store the TLS cert in the `ledgerlite-tls-staging` secret
 
 Switch to `letsencrypt-prod` issuer in the production overlay when ready for a trusted certificate.
+
+## 6. Staging CI Service Account — `GCP_SA_KEY` (for Start/Stop workflows)
+
+The [staging-start.yml](../../.github/workflows/staging-start.yml) and
+[staging-stop.yml](../../.github/workflows/staging-stop.yml) workflows authenticate to GCP
+using a dedicated CI service account (`ledgerlite-ci`). This SA is created by Terraform
+(staging only) and has the minimum permissions required:
+
+| Role | Why |
+|---|---|
+| `roles/container.admin` | Resize GKE node pool (scale to 0 / restore) |
+| `roles/cloudsql.admin` | Patch Cloud SQL activation policy (ALWAYS / NEVER) |
+
+### One-time setup (after `terraform apply` on staging)
+
+```bash
+# 1. Find the CI SA email (output from terraform)
+cd infrastructure/terraform
+terraform output -raw ci_service_account_email
+# → ledgerlite-ci@project-6737f3c2-e011-49b7-ae4.iam.gserviceaccount.com
+
+# 2. Create a JSON key for the SA
+gcloud iam service-accounts keys create /tmp/ledgerlite-ci-key.json \
+  --iam-account="ledgerlite-ci@project-6737f3c2-e011-49b7-ae4.iam.gserviceaccount.com" \
+  --project="project-6737f3c2-e011-49b7-ae4"
+
+# 3. Copy the key content (it is already JSON — no base64 needed)
+cat /tmp/ledgerlite-ci-key.json | pbcopy
+
+# 4. Delete the local key file immediately (it is sensitive)
+rm /tmp/ledgerlite-ci-key.json
+```
+
+### Add to GitHub staging environment
+
+Go to: **GitHub → repo → Settings → Environments → staging → Add secret**
+
+| Secret name | Value |
+|---|---|
+| `GCP_SA_KEY` | Paste the JSON key content from step 3 |
+
+> Do NOT add `GCP_SA_KEY` to the `production` environment — the CI SA is staging-only.
+> Production GKE is always-on and should never be scaled to 0 from CI.
+
+### Verify the workflow runs
+
+Go to: **GitHub → repo → Actions → Staging — Stop → Run workflow**
+
+A successful run will:
+1. Authenticate to GCP using `GCP_SA_KEY`
+2. Scale the `ledgerlite-staging-nodes` node pool to 0
+3. Set Cloud SQL `ledgerlite-staging-pg` to `activation-policy=NEVER`
+4. Print a summary of expected savings
+
+Then run **Staging — Start** to restore the environment and confirm it recovers correctly.
+
+### Nightly automatic stop
+
+`staging-stop.yml` runs automatically on a cron schedule every night at **22:00 UTC (03:30 IST)**.
+No manual action is needed — staging will stop itself after every working day.
+
+To start staging for a test session:
+- **GitHub → Actions → Staging — Start → Run workflow**
+- Or: it starts automatically as part of the **Deploy** workflow before applying manifests.
+
+---
+
+## Summary: All Secrets by Workflow
+
+| Workflow | Environment | Secrets used |
+|---|---|---|
+| `deploy.yml` | staging / production | `KUBECONFIG`, `DB_PASSWORD`, `JWT_SECRET`, `DATABASE_URL` |
+| `staging-start.yml` | staging | `GCP_SA_KEY` |
+| `staging-stop.yml` | staging | `GCP_SA_KEY` |
+| `build.yml` | (repo-level) | `GITHUB_TOKEN` (automatic) |
+| `test.yml` | (repo-level) | none |
+| `lint.yml` | (repo-level) | none |

@@ -1,11 +1,11 @@
 # LedgerLite — Product & Engineering Roadmap
 
 > **RICE scoring:** Reach (1–10 users/systems affected) × Impact (0.25/0.5/1/2/3) × Confidence (%) ÷ Effort (weeks)
-> Higher score = do first. Last updated: 2026-03-02 after Sprint 10.
+> Higher score = do first. Last updated: 2026-03-02 after Sprint 11.
 
 ---
 
-## Current State — Sprint 10 Complete
+## Current State — Sprint 11 Complete
 
 | Component | Status | Details |
 |---|---|---|
@@ -18,14 +18,82 @@
 | **ai-service** | ✅ Done | 3 endpoints, 16 tests |
 | **sync-service** | ✅ Done | 3 endpoints, 14 tests |
 | **database** | ✅ Done | schema.sql, 2 Alembic migrations, 29 seed categories |
-| **CI/CD** | ✅ Done | test, lint, build (GHCR), deploy workflows |
+| **CI/CD** | ✅ Done | test, lint, build (GHCR + Trivy), deploy (smoke + rollback), terraform-lint |
 | **apps/mobile-app** | ✅ Done | Flutter — 6 screens, 43 Dart files, offline sync |
 | **apps/web-dashboard** | ✅ Done | Next.js 14 — 6 tabs, TypeScript, Recharts |
-| **infrastructure/kubernetes** | ✅ Done | Kustomize base + staging/production overlays, 23 manifests |
+| **infrastructure/kubernetes** | ✅ Done | Kustomize base + staging/production overlays; PDB, HPA, ResourceQuota, TLS |
 | **infrastructure/terraform** | ✅ Done | 6 GCP modules (VPC, GKE, CloudSQL, Memorystore, Storage, IAM) |
 | **GCP staging** | ✅ Live | All 8 services running in `ledgerlite-staging`, 2 migrations applied |
 
-**146 tests passing. GCP staging live. main tagged `sprint-10-done`.**
+**146 tests passing. GCP staging live. main tagged `sprint-11-done`.**
+
+---
+
+## Cloud Cost Baseline
+
+> Reviewed and recorded at every sprint exit. Costs derived from live terraform config (us-central1).
+> Last reviewed: Sprint 11 exit, 2026-03-02.
+
+### Staging — Live Today (always-on model)
+
+| Resource | Spec | Monthly Est. |
+|---|---|---|
+| GKE cluster management | Standard zonal, 1 cluster | $0–$73 ¹ |
+| GKE nodes | 3 × preemptible e2-medium (2vCPU/4GB), 50GB pd-standard | $30 |
+| Cloud SQL | db-f1-micro, PD-SSD 20GB, ZONAL, 7-day backups | $15 |
+| Network Load Balancer | nginx-ingress → GCP Network LB (1 forwarding rule) | $18 |
+| Cloud Storage | receipts bucket, ~0 GB at dev stage | $1 |
+| VPC / Cloud Router | Router + negligible intra-VPC egress | $7 |
+| **TOTAL STAGING (always-on)** | | **$71–$144 / month** |
+
+> ¹ GCP waives the $73/month cluster management fee for the first zonal cluster per billing account — verify in GCP Billing console.
+
+### Staging — On-Demand Model (TD-33, implemented Sprint 12)
+
+Scale GKE nodes to 0 + stop Cloud SQL when not in use. Start/stop via GitHub Actions.
+Fixed costs (LB $18, Router $7, Storage $1) are unavoidable regardless of on/off.
+
+| Scenario | Active hrs/month | Compute cost | Fixed | **Total** | **vs always-on** |
+|---|---|---|---|---|---|
+| Always-on | 730 hrs | $45 | $26 | **$71** | baseline |
+| Business hours (8 hrs/day) | ~240 hrs | $15 | $26 | **$41** | **−$30/mo** |
+| CI-builds-only (~3 hrs/day) | ~90 hrs | $6 | $26 | **$32** | **−$39/mo** |
+| Nightly off only (16 hrs off) | ~360 hrs | $23 | $26 | **$49** | **−$22/mo** |
+
+> **Chosen approach (nightly schedule):** Stop every night at 10 PM UTC (3:30 AM IST) via `staging-stop.yml` cron. Restart manually or before a deploy via `staging-start.yml`. No wasted overnight compute.
+
+### Production — Projected (not yet deployed)
+
+| Resource | Spec | Monthly Est. |
+|---|---|---|
+| GKE cluster management | Standard regional, 1 cluster | $73 |
+| GKE nodes | 2 × on-demand e2-standard-2 (4vCPU/16GB), 50GB pd-standard | $130 |
+| Cloud SQL | db-custom-2-7680 (2vCPU/7.5GB), PD-SSD 50GB, REGIONAL, PITR | $195 |
+| Memorystore Redis | STANDARD_HA 2GB, Redis 7 | $90 |
+| HTTP(S) Load Balancer | with HTTPS offload + cert | $25 |
+| Cloud NAT | for private GKE nodes | $32 |
+| Cloud Storage | receipts bucket, ~10GB/month | $5 |
+| VPC / Cloud Router | Router + inter-zone egress | $15 |
+| **TOTAL PRODUCTION** | | **~$565 / month** |
+
+### Budget Caps + Alert Thresholds
+
+| Environment | Current Spend | Monthly Cap | Alert at |
+|---|---|---|---|
+| Staging | ~$71–144 / mo | **$150** | $120 (80%) |
+| Production | Not live | **$650** | $520 (80%) |
+| Combined cap | ~$71–144 / mo | **$800** | $640 (80%) |
+
+> Action (Sprint 12 — TD-32): Configure GCP Budget Alerts in console immediately. 15 minutes, prevents surprise bills.
+
+### Sprint-Exit Cost Snapshot
+
+| Sprint | Staging Cost | Production Cost | Notes |
+|---|---|---|---|
+| Sprint 10 | ~$71–144/mo | — | GCP staging first deployed |
+| Sprint 11 | ~$71–144/mo | — | No new GCP resources added |
+| Sprint 12 | TBD (~$32–49/mo) | — | Budget Alerts (TD-32) + on-demand stop/start (TD-33) |
+| Sprint 13 | TBD | — | Admin cost dashboard live (FT-01) |
 
 ---
 
@@ -65,6 +133,17 @@
 | TD-24 | Terraform lint in CI (terraform validate + fmt check) | Terraform | 3 | 1 | 1.0 | 0.5 | **6** | S11 |
 | TD-19 | Rate limiting middleware (slowapi — 100 req/min per IP) on all services | Backend | 8 | 2 | 0.8 | 2.0 | **6** | S12 |
 | TD-20 | Alembic downgrade() functions for migrations 001 + 002 | DB | 4 | 2 | 0.8 | 1.0 | **6** | S12 |
+
+### New Feature Backlog — Operator / Admin
+
+> Operator-facing features for the founding team. RICE scored on business impact, not user reach.
+
+| ID | Item | Layer | R | I | C | E | Score | Sprint |
+|---|---|---|---|---|---|---|---|---|
+| TD-32 | GCP Budget Alerts (staging $120 warn, production $520 warn) — 15 min setup in console | Infra | 5 | 2 | 1.0 | 0.1 | **100** | S12 |
+| TD-33 | On-demand staging: `staging-start.yml` + `staging-stop.yml` (nightly cron) + CI SA terraform — saves ~$22–39/mo | CI/CD | 4 | 2 | 0.9 | 0.5 | **14.4** | S12 |
+| FT-02 | Sprint-exit cost snapshot — GitHub Actions job captures `gcloud billing` at sprint tag time | CI/CD | 3 | 1 | 0.9 | 0.3 | **9** | S12 |
+| FT-01 | Admin cost dashboard — new "Infra" tab in Next.js web dashboard; GCP Billing API breakdown by resource, 3-month trend chart, budget vs actual, cost-per-active-user, sprint-exit snapshot history | Web | 2 | 3 | 0.8 | 0.5 | **9.6** | S13 |
 
 ### Tier 3 — Quality / DX (Score < 5)
 
@@ -107,42 +186,65 @@
 
 ---
 
-## Sprint 12 — Data Reliability + App Correctness
+## Sprint 12 — Data Reliability + App Correctness + Cost Visibility
 
-> **Goal:** Fix data loss risks, missing indexes, app URL configuration, CORS.
+> **Goal:** Fix data loss risks, missing indexes, app URL configuration, CORS. Add cost guardrails.
 > **Branch:** `sprint-12/data-reliability`
 
 | # | Task | ID | Effort |
 |---|---|---|---|
-| 1 | Mobile: env-driven API URLs — no hardcoded localhost defaults | TD-11 | 0.5d |
-| 2 | Web: env-driven API URLs — no hardcoded localhost defaults | TD-12 | 0.5d |
-| 3 | Add CORS middleware to all 8 FastAPI services (origins from config) | TD-14 | 1d |
-| 4 | Fix seed migration 002 for idempotency (ON CONFLICT DO NOTHING) | TD-15 | 0.5d |
-| 5 | Migration 003: add missing FK indexes to schema | TD-16 | 1d |
-| 6 | Redis: StatefulSet + PVC 1Gi + update Deployment → StatefulSet | TD-17 | 1d |
-| 7 | Add slowapi rate limiting (100 req/min per IP) to all services | TD-19 | 1d |
-| 8 | Write Alembic downgrade() for migrations 001 + 002 | TD-20 | 1d |
-| 9 | Add logging to db/session.py except handler (all 8 services) | TD-23 | 0.5d |
+| 1 | Configure GCP Budget Alerts: staging $120 warn + $150 cap; production $520 + $650 | TD-32 | 0.2d |
+| 2 | On-demand staging: `staging-start.yml` + `staging-stop.yml` (nightly 10PM UTC cron) + CI SA in Terraform IAM | TD-33 | 0.5d |
+| 3 | Sprint-exit cost snapshot: GitHub Actions job records `gcloud billing` totals at tag | FT-02 | 0.5d |
+| 4 | Mobile: env-driven API URLs — no hardcoded localhost defaults | TD-11 | 0.5d |
+| 5 | Web: env-driven API URLs — no hardcoded localhost defaults | TD-12 | 0.5d |
+| 6 | Add CORS middleware to all 8 FastAPI services (origins from config) | TD-14 | 1d |
+| 7 | Fix seed migration 002 for idempotency (ON CONFLICT DO NOTHING) | TD-15 | 0.5d |
+| 8 | Migration 003: add missing FK indexes to schema | TD-16 | 1d |
+| 9 | Redis: StatefulSet + PVC 1Gi + update Deployment → StatefulSet | TD-17 | 1d |
+| 10 | Add slowapi rate limiting (100 req/min per IP) to all services | TD-19 | 1d |
+| 11 | Write Alembic downgrade() for migrations 001 + 002 | TD-20 | 1d |
+| 12 | Add logging to db/session.py except handler (all 8 services) | TD-23 | 0.5d |
 
-**Sprint 12 deliverables:** No Redis data loss on restart, correct DB query performance, app works end-to-end in staging, rate limiting active.
+**Sprint 12 deliverables:** GCP Budget Alerts live, staging auto-stops nightly (saves ~$22–39/mo), sprint costs recorded automatically, no Redis data loss on restart, correct DB query performance, app works end-to-end in staging, rate limiting active.
 
 ---
 
-## Sprint 13 — Security Hardening + Observability
+## Sprint 13 — Security Hardening + Observability + Admin Cost Dashboard
 
-> **Goal:** Lock down cluster network, add structured logging, improve test coverage.
+> **Goal:** Lock down cluster network, add structured logging, improve test coverage, launch admin cost dashboard.
 > **Branch:** `sprint-13/security-observability`
 
 | # | Task | ID | Effort |
 |---|---|---|---|
-| 1 | Kubernetes NetworkPolicies: deny-all default + explicit service allows | TD-10 | 2d |
-| 2 | Image digest pinning: resolve sha256 in CI, write to kustomization | TD-22 | 1d |
-| 3 | Structured JSON logging + trace-id request middleware (all services) | TD-21 | 3d |
-| 4 | Increase test coverage for ai, report, notification services to 60% | TD-25 | 3d |
-| 5 | Certificate pinning in Flutter HTTP client (Dio + custom validator) | TD-26 | 2d |
-| 6 | Slack notification on CI failure (GitHub Actions webhook) | TD-28 | 0.5d |
+| 1 | Admin cost dashboard — "Infra" tab in Next.js; GCP Billing API, resource breakdown, 3-mo trend, budget % | FT-01 | 0.5d |
+| 2 | Kubernetes NetworkPolicies: deny-all default + explicit service allows | TD-10 | 2d |
+| 3 | Image digest pinning: resolve sha256 in CI, write to kustomization | TD-22 | 1d |
+| 4 | Structured JSON logging + trace-id request middleware (all services) | TD-21 | 3d |
+| 5 | Increase test coverage for ai, report, notification services to 60% | TD-25 | 3d |
+| 6 | Certificate pinning in Flutter HTTP client (Dio + custom validator) | TD-26 | 2d |
+| 7 | Slack notification on CI failure (GitHub Actions webhook) | TD-28 | 0.5d |
 
-**Sprint 13 deliverables:** Zero implicit pod-to-pod access, full request tracing, hardened mobile client.
+### FT-01 Admin Cost Dashboard — Design Spec
+
+**Location:** New "Infra" tab in the existing Next.js web dashboard (`apps/web-dashboard/`)
+
+**Panels:**
+
+| Panel | Data Source | Refresh |
+|---|---|---|
+| Current month spend by resource | GCP Billing API `projects.billingInfo` + cost export | On load |
+| Staging vs production breakdown | Billing label filter: `environment=staging/production` | On load |
+| 3-month spend trend chart (Recharts LineChart) | Billing cost export → BigQuery or direct API | On load |
+| Budget vs actual (progress bars) | Hardcoded caps from env vars vs API actuals | On load |
+| Cost-per-active-user (once users exist) | Billing total ÷ user-service count API | On load |
+| Sprint-exit snapshots table | Static JSON generated by FT-02 CI job | On load |
+
+**Access:** Admin-only route (`/infra`), gated by `user.role === 'admin'` claim in JWT.
+
+**API:** New `GET /api/infra/costs` endpoint in Next.js API routes — proxies GCP Billing API with service-account credentials (not exposed to browser).
+
+**Sprint 13 deliverables:** Admin cost dashboard live, zero implicit pod-to-pod access, full request tracing, hardened mobile client.
 
 ---
 
@@ -384,9 +486,9 @@ Legend: ✅ Done · 🔶 Stub/partial · 🔲 Planned · N/A Not applicable
 | Sprint 8 | Flutter — ledger, reports, offline sync, settings | ✅ Done | `sprint-8-done` |
 | Sprint 9 | Next.js web dashboard (6 tabs) | ✅ Done | `sprint-9-done` |
 | Sprint 10 | GCP staging deploy — all 8 services live | ✅ Done | `sprint-10-done` |
-| **Sprint 11** | **HA + TLS + CI hardening** | 🔲 Next | — |
-| Sprint 12 | Data reliability + app correctness | 🔲 | — |
-| Sprint 13 | Security hardening + observability | 🔲 | — |
+| Sprint 11 | HA + TLS + CI hardening (13 tech-debt items) | ✅ Done | `sprint-11-done` |
+| **Sprint 12** | **Data reliability + app correctness + cost visibility** | 🔲 Next | — |
+| Sprint 13 | Security hardening + observability + admin cost dashboard | 🔲 | — |
 | Sprint 14 | Help Centre + documentation hub | 🔲 | — |
 | Phase 2 | Growth features | 🔲 | — |
 | Phase 3 | Scale + platform | 🔲 | — |

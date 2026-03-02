@@ -1,0 +1,82 @@
+name: Staging — Stop
+
+on:
+  # Manual trigger (e.g. after a CI run completes)
+  workflow_dispatch: {}
+
+  # Nightly kill-switch: stop staging every night at 10 PM UTC (3:30 AM IST)
+  # so it isn't burning compute overnight.
+  schedule:
+    - cron: "0 22 * * *"
+
+env:
+  PROJECT_ID: project-6737f3c2-e011-49b7-ae4
+  REGION: us-central1
+  CLUSTER: ledgerlite-staging
+  NODE_POOL: ledgerlite-staging-nodes
+  SQL_INSTANCE: ledgerlite-staging-pg
+
+jobs:
+  stop:
+    name: Stop staging GKE + Cloud SQL
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      # -----------------------------------------------------------------------
+      # 1. Scale GKE node pool to 0 (evicts all pods, no compute charge)
+      # -----------------------------------------------------------------------
+      - name: Scale GKE node pool to 0
+        run: |
+          echo "Scaling node pool ${{ env.NODE_POOL }} down to 0..."
+          gcloud container clusters resize "${{ env.CLUSTER }}" \
+            --node-pool "${{ env.NODE_POOL }}" \
+            --num-nodes 0 \
+            --region "${{ env.REGION }}" \
+            --project "${{ env.PROJECT_ID }}" \
+            --quiet
+          echo "✅ GKE node pool scaled to 0 — no node compute charges until next start"
+
+      # -----------------------------------------------------------------------
+      # 2. Stop Cloud SQL (activation-policy=NEVER — no vCPU charge)
+      # -----------------------------------------------------------------------
+      - name: Stop Cloud SQL
+        run: |
+          echo "Stopping Cloud SQL instance ${{ env.SQL_INSTANCE }}..."
+          gcloud sql instances patch "${{ env.SQL_INSTANCE }}" \
+            --activation-policy=NEVER \
+            --project="${{ env.PROJECT_ID }}"
+
+          # Wait until SQL is SUSPENDED (max 2 min)
+          for i in $(seq 1 12); do
+            STATE=$(gcloud sql instances describe "${{ env.SQL_INSTANCE }}" \
+              --project="${{ env.PROJECT_ID }}" \
+              --format="value(state)" 2>/dev/null)
+            echo "  Cloud SQL state: ${STATE} (attempt ${i}/12)"
+            if [ "${STATE}" = "SUSPENDED" ]; then
+              echo "✅ Cloud SQL is SUSPENDED"
+              break
+            fi
+            sleep 10
+          done
+
+      - name: Summary
+        run: |
+          echo ""
+          echo "=== Staging environment stopped ==="
+          echo "GKE node pool : 0 nodes (cluster control plane still running)"
+          echo "Cloud SQL     : SUSPENDED (storage charges only ~\$0.17/day)"
+          echo ""
+          echo "Estimated savings: ~\$0.90/hour off (~\$27/month at 3-hour/day usage)"
+          echo ""
+          echo "To restart: run the 'Staging — Start' workflow."
