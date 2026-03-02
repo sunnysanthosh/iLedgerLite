@@ -34,7 +34,7 @@
 > Reviewed and recorded at every sprint exit. Costs derived from live terraform config (us-central1).
 > Last reviewed: Sprint 11 exit, 2026-03-02.
 
-### Staging — Live Today
+### Staging — Live Today (always-on model)
 
 | Resource | Spec | Monthly Est. |
 |---|---|---|
@@ -44,9 +44,23 @@
 | Network Load Balancer | nginx-ingress → GCP Network LB (1 forwarding rule) | $18 |
 | Cloud Storage | receipts bucket, ~0 GB at dev stage | $1 |
 | VPC / Cloud Router | Router + negligible intra-VPC egress | $7 |
-| **TOTAL STAGING** | | **$71–$144 / month** |
+| **TOTAL STAGING (always-on)** | | **$71–$144 / month** |
 
 > ¹ GCP waives the $73/month cluster management fee for the first zonal cluster per billing account — verify in GCP Billing console.
+
+### Staging — On-Demand Model (TD-33, implemented Sprint 12)
+
+Scale GKE nodes to 0 + stop Cloud SQL when not in use. Start/stop via GitHub Actions.
+Fixed costs (LB $18, Router $7, Storage $1) are unavoidable regardless of on/off.
+
+| Scenario | Active hrs/month | Compute cost | Fixed | **Total** | **vs always-on** |
+|---|---|---|---|---|---|
+| Always-on | 730 hrs | $45 | $26 | **$71** | baseline |
+| Business hours (8 hrs/day) | ~240 hrs | $15 | $26 | **$41** | **−$30/mo** |
+| CI-builds-only (~3 hrs/day) | ~90 hrs | $6 | $26 | **$32** | **−$39/mo** |
+| Nightly off only (16 hrs off) | ~360 hrs | $23 | $26 | **$49** | **−$22/mo** |
+
+> **Chosen approach (nightly schedule):** Stop every night at 10 PM UTC (3:30 AM IST) via `staging-stop.yml` cron. Restart manually or before a deploy via `staging-start.yml`. No wasted overnight compute.
 
 ### Production — Projected (not yet deployed)
 
@@ -78,7 +92,7 @@
 |---|---|---|---|
 | Sprint 10 | ~$71–144/mo | — | GCP staging first deployed |
 | Sprint 11 | ~$71–144/mo | — | No new GCP resources added |
-| Sprint 12 | TBD | — | Budget Alerts configured (TD-32) |
+| Sprint 12 | TBD (~$32–49/mo) | — | Budget Alerts (TD-32) + on-demand stop/start (TD-33) |
 | Sprint 13 | TBD | — | Admin cost dashboard live (FT-01) |
 
 ---
@@ -127,6 +141,7 @@
 | ID | Item | Layer | R | I | C | E | Score | Sprint |
 |---|---|---|---|---|---|---|---|---|
 | TD-32 | GCP Budget Alerts (staging $120 warn, production $520 warn) — 15 min setup in console | Infra | 5 | 2 | 1.0 | 0.1 | **100** | S12 |
+| TD-33 | On-demand staging: `staging-start.yml` + `staging-stop.yml` (nightly cron) + CI SA terraform — saves ~$22–39/mo | CI/CD | 4 | 2 | 0.9 | 0.5 | **14.4** | S12 |
 | FT-02 | Sprint-exit cost snapshot — GitHub Actions job captures `gcloud billing` at sprint tag time | CI/CD | 3 | 1 | 0.9 | 0.3 | **9** | S12 |
 | FT-01 | Admin cost dashboard — new "Infra" tab in Next.js web dashboard; GCP Billing API breakdown by resource, 3-month trend chart, budget vs actual, cost-per-active-user, sprint-exit snapshot history | Web | 2 | 3 | 0.8 | 0.5 | **9.6** | S13 |
 
@@ -179,18 +194,19 @@
 | # | Task | ID | Effort |
 |---|---|---|---|
 | 1 | Configure GCP Budget Alerts: staging $120 warn + $150 cap; production $520 + $650 | TD-32 | 0.2d |
-| 2 | Sprint-exit cost snapshot: GitHub Actions job records `gcloud billing` totals at tag | FT-02 | 0.5d |
-| 3 | Mobile: env-driven API URLs — no hardcoded localhost defaults | TD-11 | 0.5d |
-| 4 | Web: env-driven API URLs — no hardcoded localhost defaults | TD-12 | 0.5d |
-| 5 | Add CORS middleware to all 8 FastAPI services (origins from config) | TD-14 | 1d |
-| 6 | Fix seed migration 002 for idempotency (ON CONFLICT DO NOTHING) | TD-15 | 0.5d |
-| 7 | Migration 003: add missing FK indexes to schema | TD-16 | 1d |
-| 8 | Redis: StatefulSet + PVC 1Gi + update Deployment → StatefulSet | TD-17 | 1d |
-| 9 | Add slowapi rate limiting (100 req/min per IP) to all services | TD-19 | 1d |
-| 10 | Write Alembic downgrade() for migrations 001 + 002 | TD-20 | 1d |
-| 11 | Add logging to db/session.py except handler (all 8 services) | TD-23 | 0.5d |
+| 2 | On-demand staging: `staging-start.yml` + `staging-stop.yml` (nightly 10PM UTC cron) + CI SA in Terraform IAM | TD-33 | 0.5d |
+| 3 | Sprint-exit cost snapshot: GitHub Actions job records `gcloud billing` totals at tag | FT-02 | 0.5d |
+| 4 | Mobile: env-driven API URLs — no hardcoded localhost defaults | TD-11 | 0.5d |
+| 5 | Web: env-driven API URLs — no hardcoded localhost defaults | TD-12 | 0.5d |
+| 6 | Add CORS middleware to all 8 FastAPI services (origins from config) | TD-14 | 1d |
+| 7 | Fix seed migration 002 for idempotency (ON CONFLICT DO NOTHING) | TD-15 | 0.5d |
+| 8 | Migration 003: add missing FK indexes to schema | TD-16 | 1d |
+| 9 | Redis: StatefulSet + PVC 1Gi + update Deployment → StatefulSet | TD-17 | 1d |
+| 10 | Add slowapi rate limiting (100 req/min per IP) to all services | TD-19 | 1d |
+| 11 | Write Alembic downgrade() for migrations 001 + 002 | TD-20 | 1d |
+| 12 | Add logging to db/session.py except handler (all 8 services) | TD-23 | 0.5d |
 
-**Sprint 12 deliverables:** GCP Budget Alerts live, sprint costs recorded automatically, no Redis data loss on restart, correct DB query performance, app works end-to-end in staging, rate limiting active.
+**Sprint 12 deliverables:** GCP Budget Alerts live, staging auto-stops nightly (saves ~$22–39/mo), sprint costs recorded automatically, no Redis data loss on restart, correct DB query performance, app works end-to-end in staging, rate limiting active.
 
 ---
 
