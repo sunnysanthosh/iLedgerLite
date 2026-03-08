@@ -15,60 +15,47 @@ down_revision: Union[str, None] = "001"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
-INCOME_CATEGORIES = [
-    ("Salary", "briefcase"),
-    ("Freelance", "laptop"),
-    ("Business Income", "store"),
-    ("Investment Returns", "trending-up"),
-    ("Rental Income", "home"),
-    ("Gift Received", "gift"),
-    ("Refund", "rotate-ccw"),
-    ("Other Income", "plus-circle"),
-]
-
-EXPENSE_CATEGORIES = [
-    ("Food & Dining", "utensils"),
-    ("Groceries", "shopping-cart"),
-    ("Transport", "car"),
-    ("Fuel", "fuel"),
-    ("Rent", "home"),
-    ("Utilities", "zap"),
-    ("Mobile & Internet", "smartphone"),
-    ("Shopping", "shopping-bag"),
-    ("Healthcare", "heart"),
-    ("Education", "book"),
-    ("Entertainment", "film"),
-    ("Travel", "map"),
-    ("Insurance", "shield"),
-    ("EMI / Loan Payment", "credit-card"),
-    ("Subscription", "repeat"),
-    ("Gift / Donation", "gift"),
-    ("Taxes", "file-text"),
-    ("Maintenance", "tool"),
-    ("Salary Expense", "users"),
-    ("Supplier Payment", "truck"),
-    ("Other Expense", "minus-circle"),
-]
-
 
 def upgrade() -> None:
-    categories = sa.table(
-        "categories",
-        sa.column("id", sa.Uuid()),
-        sa.column("user_id", sa.Uuid()),
-        sa.column("name", sa.String()),
-        sa.column("type", sa.String()),
-        sa.column("icon", sa.String()),
-        sa.column("is_system", sa.Boolean()),
-    )
-
-    rows = []
-    for name, icon in INCOME_CATEGORIES:
-        rows.append({"user_id": None, "name": name, "type": "income", "icon": icon, "is_system": True})
-    for name, icon in EXPENSE_CATEGORIES:
-        rows.append({"user_id": None, "name": name, "type": "expense", "icon": icon, "is_system": True})
-
-    op.bulk_insert(categories, rows)
+    op.execute(sa.text("""
+        INSERT INTO categories (user_id, name, type, icon, is_system)
+        SELECT NULL, v.name, v.type::VARCHAR, v.icon, true
+        FROM (VALUES
+            ('Salary', 'income', 'briefcase'),
+            ('Freelance', 'income', 'laptop'),
+            ('Business Income', 'income', 'store'),
+            ('Investment Returns', 'income', 'trending-up'),
+            ('Rental Income', 'income', 'home'),
+            ('Gift Received', 'income', 'gift'),
+            ('Refund', 'income', 'rotate-ccw'),
+            ('Other Income', 'income', 'plus-circle'),
+            ('Food & Dining', 'expense', 'utensils'),
+            ('Groceries', 'expense', 'shopping-cart'),
+            ('Transport', 'expense', 'car'),
+            ('Fuel', 'expense', 'fuel'),
+            ('Rent', 'expense', 'home'),
+            ('Utilities', 'expense', 'zap'),
+            ('Mobile & Internet', 'expense', 'smartphone'),
+            ('Shopping', 'expense', 'shopping-bag'),
+            ('Healthcare', 'expense', 'heart'),
+            ('Education', 'expense', 'book'),
+            ('Entertainment', 'expense', 'film'),
+            ('Travel', 'expense', 'map'),
+            ('Insurance', 'expense', 'shield'),
+            ('EMI / Loan Payment', 'expense', 'credit-card'),
+            ('Subscription', 'expense', 'repeat'),
+            ('Gift / Donation', 'expense', 'gift'),
+            ('Taxes', 'expense', 'file-text'),
+            ('Maintenance', 'expense', 'tool'),
+            ('Salary Expense', 'expense', 'users'),
+            ('Supplier Payment', 'expense', 'truck'),
+            ('Other Expense', 'expense', 'minus-circle')
+        ) AS v(name, type, icon)
+        WHERE NOT EXISTS (
+            SELECT 1 FROM categories
+            WHERE name = v.name AND type = v.type::VARCHAR AND is_system = true
+        )
+    """))
 
 
 def downgrade() -> None:
