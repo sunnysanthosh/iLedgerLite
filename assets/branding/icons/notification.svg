@@ -1,0 +1,7 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g transform="skewX(-15)">
+    <path d="M18 8C18 4.68629 15.3137 2 12 2C8.68629 2 6 4.68629 6 8C6 14 3 17 3 17H21C21 17 18 14 18 8Z" stroke="#1B2D4B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M10.3 21C10.7 21.6 11.3 22 12 22C12.7 22 13.3 21.6 13.7 21" stroke="#E68A2E" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="12" cy="7" r="1" fill="#2B6BAE"/>
+  </g>
+</svg>

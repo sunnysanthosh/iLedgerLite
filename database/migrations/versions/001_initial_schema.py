@@ -179,11 +179,11 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_table("sync_log")
     op.drop_table("notifications")
+    op.drop_table("user_settings")
     op.drop_table("receipts")
     op.drop_table("ledger_entries")
     op.drop_table("customers")
-    op.drop_table("transactions")
     op.drop_table("categories")
+    op.drop_table("transactions")
     op.drop_table("accounts")
-    op.drop_table("user_settings")
     op.drop_table("users")

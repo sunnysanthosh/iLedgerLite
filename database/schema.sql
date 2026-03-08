@@ -123,3 +123,7 @@ CREATE INDEX idx_accounts_user_id ON accounts(user_id);
 CREATE INDEX idx_user_settings_user_id ON user_settings(user_id);
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX idx_sync_log_user_device ON sync_log(user_id, device_id);
+CREATE INDEX idx_categories_user_id ON categories(user_id);
+CREATE INDEX idx_transactions_category_id ON transactions(category_id) WHERE category_id IS NOT NULL;
+CREATE INDEX idx_customers_user_id ON customers(user_id);
+CREATE INDEX idx_receipts_transaction_id ON receipts(transaction_id);

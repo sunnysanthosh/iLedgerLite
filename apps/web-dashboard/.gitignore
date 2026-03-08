@@ -1,0 +1,15 @@
+# Next.js
+.next/
+out/
+build/
+
+# Dependencies
+node_modules/
+
+# Environment — .env.local holds real secrets; never commit it.
+# .env.local.example is the committed template — keep it tracked.
+.env.local
+.env.*.local
+
+# Vercel
+.vercel

@@ -38,6 +38,7 @@ yarn-error.log*
 .env
 .env.*
 !.env.example
+!.env.local.example
 
 # OS
 .DS_Store
@@ -75,3 +76,8 @@ htmlcov/
 .pytest_cache/
 coverage/
 infrastructure/kubernetes/overlays/staging/apply-secrets.sh
+
+# Raw / unsanitized asset exports dropped at repo root — organized copies live in assets/branding/
+/*.png
+/*.jpeg
+/*.jpg

@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
+    allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:8080", "http://localhost:19006"]
 
     @property
     def async_database_url(self) -> str:

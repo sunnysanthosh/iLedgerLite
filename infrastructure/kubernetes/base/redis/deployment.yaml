@@ -1,11 +1,10 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: redis
-  labels:
-    app.kubernetes.io/name: redis
-    app.kubernetes.io/component: cache
+  namespace: ledgerlite
 spec:
+  serviceName: redis
   replicas: 1
   selector:
     matchLabels:
@@ -19,20 +18,20 @@ spec:
       containers:
         - name: redis
           image: redis:7-alpine
-          args:
-            - redis-server
-            - --appendonly
-            - "yes"
+          command: ["redis-server", "--appendonly", "yes", "--save", "60", "1"]
           ports:
             - containerPort: 6379
               name: redis
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
           resources:
             requests:
-              cpu: 50m
-              memory: 64Mi
+              cpu: "50m"
+              memory: "64Mi"
             limits:
-              cpu: 200m
-              memory: 256Mi
+              cpu: "200m"
+              memory: "256Mi"
           livenessProbe:
             exec:
               command:
@@ -51,3 +50,11 @@ spec:
             periodSeconds: 5
             timeoutSeconds: 3
             failureThreshold: 3
+  volumeClaimTemplates:
+    - metadata:
+        name: redis-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

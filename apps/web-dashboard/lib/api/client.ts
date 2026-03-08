@@ -9,6 +9,7 @@ export const SERVICE_URLS = {
   report:       process.env.NEXT_PUBLIC_REPORT_URL       ?? "http://localhost:8005",
   ai:           process.env.NEXT_PUBLIC_AI_URL           ?? "http://localhost:8006",
   notification: process.env.NEXT_PUBLIC_NOTIFICATION_URL ?? "http://localhost:8007",
+  sync:         process.env.NEXT_PUBLIC_SYNC_URL         ?? "http://localhost:8008",
 }
 
 // Factory: one axios instance per service base URL, all sharing the same interceptors
@@ -74,3 +75,4 @@ export const ledgerClient       = makeClient(SERVICE_URLS.ledger)
 export const reportClient       = makeClient(SERVICE_URLS.report)
 export const aiClient           = makeClient(SERVICE_URLS.ai)
 export const notificationClient = makeClient(SERVICE_URLS.notification)
+export const syncClient         = makeClient(SERVICE_URLS.sync)
