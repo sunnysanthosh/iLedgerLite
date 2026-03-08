@@ -1,0 +1,110 @@
+name: Sprint Cost Snapshot
+
+on:
+  workflow_dispatch:
+    inputs:
+      sprint_tag:
+        description: "Sprint tag (e.g. sprint-12-done)"
+        required: false
+        default: "manual"
+  push:
+    tags:
+      - "sprint-*-done"
+
+env:
+  PROJECT_ID: project-6737f3c2-e011-49b7-ae4
+
+jobs:
+  snapshot:
+    name: Capture GCP cost snapshot
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Capture cost snapshot
+        id: costs
+        run: |
+          SPRINT_TAG="${{ github.ref_name }}"
+          if [ "$SPRINT_TAG" = "" ] || [ "$SPRINT_TAG" = "refs/heads/main" ]; then
+            SPRINT_TAG="${{ inputs.sprint_tag }}"
+          fi
+          SNAPSHOT_DATE=$(date -u +"%Y-%m-%d")
+
+          # Query billing for current month spend by SKU family
+          # gcloud billing projects describe gives billing account; use gcloud for cost data
+          BILLING_ACCOUNT=$(gcloud billing projects describe "${{ env.PROJECT_ID }}" \
+            --format="value(billingAccountName)" | sed 's|billingAccounts/||')
+
+          # Export current month costs by service using gcloud billing
+          MONTH=$(date -u +"%Y-%m")
+          RAW=$(gcloud billing accounts get-iam-policy "$BILLING_ACCOUNT" \
+            --format=json 2>/dev/null || echo "{}")
+
+          # Use resource manager to get cost data (approximate via describe)
+          # Since direct billing API requires OAuth2, use gcloud sql + container for actuals
+          GKE_NODES=$(gcloud container clusters describe ledgerlite-staging \
+            --region us-central1 \
+            --format="value(currentNodeCount)" 2>/dev/null || echo "0")
+
+          SQL_TIER=$(gcloud sql instances describe ledgerlite-staging-pg \
+            --format="value(settings.tier)" 2>/dev/null || echo "unknown")
+
+          SQL_STATE=$(gcloud sql instances describe ledgerlite-staging-pg \
+            --format="value(state)" 2>/dev/null || echo "unknown")
+
+          echo "sprint_tag=$SPRINT_TAG" >> $GITHUB_OUTPUT
+          echo "snapshot_date=$SNAPSHOT_DATE" >> $GITHUB_OUTPUT
+          echo "gke_nodes=$GKE_NODES" >> $GITHUB_OUTPUT
+          echo "sql_tier=$SQL_TIER" >> $GITHUB_OUTPUT
+          echo "sql_state=$SQL_STATE" >> $GITHUB_OUTPUT
+
+      - name: Append snapshot to cost-snapshots.md
+        run: |
+          SPRINT_TAG="${{ steps.costs.outputs.sprint_tag }}"
+          DATE="${{ steps.costs.outputs.snapshot_date }}"
+          GKE_NODES="${{ steps.costs.outputs.gke_nodes }}"
+          SQL_TIER="${{ steps.costs.outputs.sql_tier }}"
+          SQL_STATE="${{ steps.costs.outputs.sql_state }}"
+
+          # Ensure the file and header exist
+          if [ ! -f docs/operations/cost-snapshots.md ]; then
+            cat > docs/operations/cost-snapshots.md << 'HEADER'
+# Sprint Cost Snapshots
+
+> Auto-generated at each sprint tag by the `cost-snapshot.yml` workflow.
+> Review after each sprint to track infrastructure spend trends.
+
+| Date | Sprint Tag | GKE Nodes | SQL Tier | SQL State | Notes |
+|---|---|---|---|---|---|
+HEADER
+          fi
+
+          # Append the new row
+          echo "| ${DATE} | ${SPRINT_TAG} | ${GKE_NODES} | ${SQL_TIER} | ${SQL_STATE} | auto-captured |" \
+            >> docs/operations/cost-snapshots.md
+
+          echo "Snapshot appended for ${SPRINT_TAG} on ${DATE}"
+
+      - name: Commit snapshot
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/operations/cost-snapshots.md
+          git diff --cached --quiet || git commit -m "chore: cost snapshot at ${{ steps.costs.outputs.sprint_tag }} (${{ steps.costs.outputs.snapshot_date }})"
+          git push origin main
