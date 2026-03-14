@@ -9,6 +9,7 @@ export interface UserProfile {
   full_name: string
   phone: string | null
   is_active: boolean
+  is_admin?: boolean   // optional until backend adds the field; defaults to false
   created_at: string
   updated_at: string
 }

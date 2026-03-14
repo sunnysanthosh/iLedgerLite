@@ -1,10 +1,14 @@
 "use client"
 
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts"
 import type { ResourceCost, SprintSnapshot, BudgetLine, CostTrend } from "@/app/api/infra/costs/route"
+import { isAdmin } from "@/lib/auth/is-admin"
+import { useAuthStore } from "@/lib/store/auth-store"
 
 interface CostsPayload {
   resources: ResourceCost[]
@@ -42,12 +46,21 @@ function BudgetBar({ label, current, cap, alertAt }: { label: string; current: n
 }
 
 export default function InfraPage() {
+  const router = useRouter()
+  const user = useAuthStore((s) => s.user)
+
+  useEffect(() => {
+    if (!isAdmin(user)) router.replace("/dashboard")
+  }, [user, router])
+
   const { data, isLoading, error } = useQuery<CostsPayload>({
     queryKey: ["infra-costs"],
     queryFn: fetchCosts,
     staleTime: 5 * 60 * 1000,
+    enabled: isAdmin(user),
   })
 
+  if (!isAdmin(user)) return null
   if (isLoading) return <div className="text-sm text-gray-400 p-4">Loading cost data…</div>
   if (error || !data) return <div className="text-sm text-red-500 p-4">Failed to load cost data.</div>
 

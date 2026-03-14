@@ -3,20 +3,25 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { isAdmin } from "@/lib/auth/is-admin"
+import { useAuthStore } from "@/lib/store/auth-store"
 
 const NAV = [
-  { href: "/dashboard",    label: "Dashboard",     icon: "▦" },
-  { href: "/transactions", label: "Transactions",  icon: "↕" },
-  { href: "/accounts",     label: "Accounts",      icon: "🏦" },
-  { href: "/ledger",       label: "Ledger",        icon: "📒" },
-  { href: "/reports",      label: "Reports",       icon: "📊" },
-  { href: "/analytics",    label: "Analytics",     icon: "🤖" },
-  { href: "/settings",     label: "Settings",      icon: "⚙" },
-  { href: "/infra",        label: "Infra Costs",   icon: "☁" },
+  { href: "/dashboard",    label: "Dashboard",     icon: "▦",  adminOnly: false },
+  { href: "/transactions", label: "Transactions",  icon: "↕",  adminOnly: false },
+  { href: "/accounts",     label: "Accounts",      icon: "🏦", adminOnly: false },
+  { href: "/ledger",       label: "Ledger",        icon: "📒", adminOnly: false },
+  { href: "/reports",      label: "Reports",       icon: "📊", adminOnly: false },
+  { href: "/analytics",    label: "Analytics",     icon: "🤖", adminOnly: false },
+  { href: "/settings",     label: "Settings",      icon: "⚙",  adminOnly: false },
+  { href: "/infra",        label: "Infra Costs",   icon: "☁",  adminOnly: true  },
 ]
 
 export function Sidebar() {
   const pathname = usePathname()
+  const user = useAuthStore((s) => s.user)
+  const adminUser = isAdmin(user)
+  const visibleNav = NAV.filter((item) => !item.adminOnly || adminUser)
 
   return (
     <aside className="w-56 bg-white border-r flex flex-col shrink-0">
@@ -28,7 +33,7 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 py-4 space-y-1 px-3">
-        {NAV.map(({ href, label, icon }) => {
+        {visibleNav.map(({ href, label, icon }) => {
           const active = pathname === href || pathname.startsWith(`${href}/`)
           return (
             <Link
