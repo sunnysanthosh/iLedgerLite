@@ -1,9 +1,13 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../storage/token_storage.dart';
 import 'api_constants.dart';
 import 'auth_interceptor.dart';
+import 'certificate_pinning.dart';
 
 final apiClientProvider = Provider<ApiClient>((ref) {
   final tokenStorage = ref.watch(tokenStorageProvider);
@@ -18,6 +22,14 @@ class ApiClient {
       receiveTimeout: const Duration(seconds: 10),
       headers: {'Content-Type': 'application/json'},
     ));
+
+    // Apply certificate pinning when enabled (production builds only).
+    // CertificatePinning.init() must be awaited in main() before providers are read.
+    if (CertificatePinning.isEnabled && CertificatePinning.context != null) {
+      (_dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () =>
+          HttpClient(context: CertificatePinning.context!);
+    }
+
     _dio.interceptors.add(AuthInterceptor(
       dio: _dio,
       tokenStorage: _tokenStorage,
