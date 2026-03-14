@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
 
 // ---------------------------------------------------------------------------
 // Cost data derived from live Terraform config (infrastructure/terraform/).
@@ -64,8 +65,69 @@ const TRENDS: CostTrend[] = [
   { month: "Mar 2026", staging: 49,  production: null },  // Sprint 12 — nightly-off model
 ]
 
-export async function GET() {
-  const stagingTotal  = RESOURCES.reduce((s, r) => s + r.stagingMonthly, 0)
+// ---------------------------------------------------------------------------
+// Server-side admin check
+// Uses AUTH_URL (server-only env var, no NEXT_PUBLIC_ prefix) to call
+// auth-service /auth/me. Falls back to NEXT_PUBLIC_AUTH_URL for local dev.
+//
+// Admin access granted when EITHER condition is true:
+//   1. auth-service returns { is_admin: true } (future backend field)
+//   2. user email is in ADMIN_EMAILS env var (server-only, comma-separated)
+//
+// Fails closed on network error or timeout — no data is returned.
+// ---------------------------------------------------------------------------
+
+async function resolveAdminStatus(token: string): Promise<boolean> {
+  const authBase =
+    process.env.AUTH_URL ??
+    process.env.NEXT_PUBLIC_AUTH_URL ??
+    "http://localhost:8001"
+
+  let userEmail: string
+  let isAdminFlag: boolean
+
+  try {
+    const res = await fetch(`${authBase}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(5000),
+    })
+    if (!res.ok) return false
+    const user = (await res.json()) as { email?: string; is_admin?: boolean }
+    if (!user.email) return false
+    userEmail = user.email
+    isAdminFlag = user.is_admin === true
+  } catch {
+    return false  // network error or timeout — deny access
+  }
+
+  if (isAdminFlag) return true
+
+  // Server-side allow-list: ADMIN_EMAILS (no NEXT_PUBLIC_ — stays server-only)
+  const allowList = process.env.ADMIN_EMAILS ?? ""
+  if (!allowList) return false
+
+  return allowList
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .includes(userEmail.toLowerCase())
+}
+
+export async function GET(request: NextRequest) {
+  // ── 1. Require Bearer token ──────────────────────────────────────────────
+  const authHeader = request.headers.get("authorization")
+  if (!authHeader?.startsWith("Bearer ")) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+  const token = authHeader.slice(7)
+
+  // ── 2. Verify token + admin role (server-side, via auth-service) ─────────
+  const admin = await resolveAdminStatus(token)
+  if (!admin) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
+
+  // ── 3. Return cost data ──────────────────────────────────────────────────
+  const stagingTotal    = RESOURCES.reduce((s, r) => s + r.stagingMonthly, 0)
   const productionTotal = RESOURCES.reduce((s, r) => s + (r.productionMonthly ?? 0), 0)
 
   return NextResponse.json({
