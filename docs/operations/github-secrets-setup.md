@@ -147,3 +147,27 @@ To start staging for a test session:
 | `build.yml` | (repo-level) | `GITHUB_TOKEN` (automatic) |
 | `test.yml` | (repo-level) | none |
 | `lint.yml` | (repo-level) | none |
+
+## 7. Slack Webhook — `SLACK_WEBHOOK_URL` (for CI failure alerts)
+
+The `test.yml`, `lint.yml`, and `build.yml` workflows send a Slack message whenever a CI job fails.
+The notification is **silently skipped** if the secret is not configured — no CI breakage.
+
+### One-time setup
+
+1. In Slack: **Apps → Incoming Webhooks → Add to Slack** → choose channel (e.g. `#ledgerlite-ci`) → copy the webhook URL
+2. In GitHub: **repo → Settings → Secrets and variables → Actions → New repository secret**
+
+| Secret name | Value |
+|---|---|
+| `SLACK_WEBHOOK_URL` | The Incoming Webhook URL from step 1 |
+
+> Add as a **repository secret** (not environment-scoped) so alerts fire for any branch/PR.
+
+### What the alert looks like
+
+```
+❌ Test suite failed — `Test` on `sprint-13/security-observability`
+Repository   sunnysanthosh/iLedgerLite    Triggered by  sunnysanthosh
+Commit       a1b2c3d                      Run           View failed run
+```
