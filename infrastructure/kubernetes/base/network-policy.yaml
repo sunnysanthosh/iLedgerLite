@@ -1,0 +1,173 @@
+# NetworkPolicies — zero-trust pod-to-pod networking for LedgerLite
+#
+# Traffic model:
+#   External → ingress-nginx → backend services (port 8000)
+#   backend services ↔ backend services (port 8000, intra-cluster RPC)
+#   backend services → postgres pod OR Cloud SQL (port 5432 on 10.0.0.0/8)
+#   backend services → redis pod (port 6379)
+#   migrations job  → postgres pod OR Cloud SQL (port 5432)
+#   all pods        → kube-dns (port 53 UDP+TCP)
+#
+# Update the Cloud SQL CIDR if your VPC uses a different RFC1918 range.
+
+# ── 1. Default-deny all ingress and egress ───────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+spec:
+  podSelector: {}   # applies to every pod in the namespace
+  policyTypes:
+    - Ingress
+    - Egress
+
+---
+# ── 2. Allow all pods → kube-dns (cluster DNS resolution) ───────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+---
+# ── 3. Allow ingress-nginx controller → backend services (port 8000) ─────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-controller
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: backend
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8000
+
+---
+# ── 4. Allow backend services → backend services (service-to-service RPC) ────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-backend-to-backend
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: backend
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: backend
+      ports:
+        - protocol: TCP
+          port: 8000
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: backend
+      ports:
+        - protocol: TCP
+          port: 8000
+
+---
+# ── 5. Allow backend services → postgres pod + Cloud SQL private IP ───────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-backend-to-postgres
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: backend
+  policyTypes:
+    - Egress
+  egress:
+    # local postgres pod (docker-compose / kind dev cluster)
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgres
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Cloud SQL via VPC private IP (e.g. 10.82.0.3 in GCP staging)
+    - to:
+        - ipBlock:
+            cidr: 10.0.0.0/8
+      ports:
+        - protocol: TCP
+          port: 5432
+
+---
+# ── 6. Allow backend services → redis pod (port 6379) ────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-backend-to-redis
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: backend
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+
+---
+# ── 7. Allow migrations job → postgres pod + Cloud SQL private IP ─────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-migrations-to-postgres
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: migrations
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgres
+      ports:
+        - protocol: TCP
+          port: 5432
+    - to:
+        - ipBlock:
+            cidr: 10.0.0.0/8
+      ports:
+        - protocol: TCP
+          port: 5432
+    # DNS (needed so the migrations pod can resolve the DB hostname)
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
