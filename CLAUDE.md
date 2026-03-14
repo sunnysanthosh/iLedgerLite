@@ -141,6 +141,24 @@ tests/test_<entity>.py        # Test cases
 - **get_current_user dependency:** Each non-auth service implements its own in `services/security.py`, decoding JWT and loading the user from its own DB session.
 - **Auth-required endpoints:** Use `current_user: User = Depends(get_current_user)` — no manual token parsing in routers.
 
+### Role-Based Access Control (RBAC)
+
+**Current roles:** `user` (all authenticated users) and `admin` (founders/ops via `is_admin` DB field or `ADMIN_EMAILS` env var).
+
+**Rules for every new admin-only feature:**
+1. **Server layer is mandatory.** Every admin API route must: (a) require `Authorization: Bearer <token>`, (b) call `resolveAdminStatus(token)` (proxy to auth-service `/auth/me`), (c) return `401` / `403` before returning any data.
+2. **Fail closed.** Network error, timeout, or missing field → deny access. Never default to allow.
+3. **`ADMIN_EMAILS` is server-only.** Never use `NEXT_PUBLIC_ADMIN_EMAILS` as an access control — it is a UX hint only (visible in the browser JS bundle).
+4. **Client guards are UX only.** `isAdmin()` check in sidebar + `useEffect` redirect on the page are convenience, not security.
+5. **User-scoped queries always.** Regular user routes must filter at the DB level by `user_id = current_user.id`. Never rely on application-layer filtering alone.
+
+**Reference implementations:**
+- Server admin check: `apps/web-dashboard/app/api/infra/costs/route.ts` — `resolveAdminStatus()`
+- Client admin check: `apps/web-dashboard/lib/auth/is-admin.ts` — `isAdmin()`
+- Sidebar nav gating: `apps/web-dashboard/components/layout/sidebar.tsx` — `adminOnly` flag
+- Full checklist: `docs/developer/rbac-guide.md`
+- User personas + permission matrix: `docs/product/user-personas.md`
+
 ### Pydantic Schemas
 - Use `model_config = {"from_attributes": True}` for ORM conversion.
 - Use `@field_validator` for business rules (password length, enum checks, ISO currency codes).
