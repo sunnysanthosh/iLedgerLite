@@ -77,6 +77,12 @@ htmlcov/
 coverage/
 infrastructure/kubernetes/overlays/staging/apply-secrets.sh
 
+# Admin runbooks — contain credentials, env vars, and access procedures.
+# Never commit. Keep in a secure channel (1Password, Notion private page, etc.).
+# Only the placeholder README is committed (see docs/admin/README.md).
+docs/admin/*.md
+!docs/admin/README.md
+
 # Raw / unsanitized asset exports dropped at repo root — organized copies live in assets/branding/
 /*.png
 /*.jpeg
