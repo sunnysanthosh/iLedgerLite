@@ -19,8 +19,10 @@ interface CostsPayload {
   note: string
 }
 
-async function fetchCosts(): Promise<CostsPayload> {
-  const res = await fetch("/api/infra/costs")
+async function fetchCosts(token: string): Promise<CostsPayload> {
+  const res = await fetch("/api/infra/costs", {
+    headers: { Authorization: `Bearer ${token}` },
+  })
   if (!res.ok) throw new Error("Failed to load cost data")
   return res.json()
 }
@@ -48,16 +50,17 @@ function BudgetBar({ label, current, cap, alertAt }: { label: string; current: n
 export default function InfraPage() {
   const router = useRouter()
   const user = useAuthStore((s) => s.user)
+  const accessToken = useAuthStore((s) => s.accessToken)
 
   useEffect(() => {
     if (!isAdmin(user)) router.replace("/dashboard")
   }, [user, router])
 
   const { data, isLoading, error } = useQuery<CostsPayload>({
-    queryKey: ["infra-costs"],
-    queryFn: fetchCosts,
+    queryKey: ["infra-costs", accessToken],
+    queryFn: () => fetchCosts(accessToken ?? ""),
     staleTime: 5 * 60 * 1000,
-    enabled: isAdmin(user),
+    enabled: isAdmin(user) && !!accessToken,
   })
 
   if (!isAdmin(user)) return null
