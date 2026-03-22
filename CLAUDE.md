@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 LedgerLite is an **early-stage fintech SaaS product**. Backend microservices are under active development. Planning documents (PRDs, investor briefs, architecture blueprints) are at the root level. See `ROADMAP.md` for implementation status.
 
-**Completed:** auth-service, user-service, transaction-service, ledger-service, report-service, notification-service, ai-service, sync-service, Alembic migrations, CI/CD (test + lint + build + deploy), Flutter mobile app (auth, dashboard, transactions, accounts, ledger, reports, settings, offline sync — 43 Dart files), Kubernetes manifests (Kustomize base + staging/production overlays — 23 files), Next.js web dashboard (6 tabs), Terraform IaC for GCP (6 modules — vpc, gke, cloudsql, memorystore, storage, iam)
-**In Progress:** Sprint 6C deployment to GCP staging (`sprint-6c/terraform-gcp` branch)
-**Not Started:** —
+**Completed:** auth-service, user-service, transaction-service, ledger-service, report-service, notification-service, ai-service, sync-service, Alembic migrations (5 migrations), CI/CD (test + lint + build + deploy + coverage gate), Flutter mobile app (auth, dashboard, transactions, accounts, ledger, reports, settings, offline sync — 43 Dart files), Kubernetes manifests (Kustomize base + staging/production overlays — 23 files), Next.js web dashboard (6 tabs + admin infra tab), Terraform IaC for GCP (6 modules — vpc, gke, cloudsql, memorystore, storage, iam), GCP staging live (all 8 services), multi-user organisations (Sprint 14 — organisations + org_memberships tables, `get_org_member` dependency, 7 org CRUD endpoints, org_id scoping across all data services)
+**In Progress:** Sprint 15 — web dashboard OrgSwitcher + Flutter org selection screen; org scoping for ai/notification/sync services
+**Not Started:** Sprint 16 — granular org-level permissions; audit log table
 
 ## Python Environment
 

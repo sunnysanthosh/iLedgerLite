@@ -1,31 +1,32 @@
 # LedgerLite — Product & Engineering Roadmap
 
 > **RICE scoring:** Reach (1–10 users/systems affected) × Impact (0.25/0.5/1/2/3) × Confidence (%) ÷ Effort (weeks)
-> Higher score = do first. Last updated: 2026-03-02 after Sprint 11.
+> Higher score = do first. Last updated: 2026-03-22 after Sprint 14.
 
 ---
 
-## Current State — Sprint 11 Complete
+## Current State — Sprint 14 Done ✅ (tagged `sprint-14-done`)
 
 | Component | Status | Details |
 |---|---|---|
-| **auth-service** | ✅ Done | 4 endpoints, 15 tests |
-| **user-service** | ✅ Done | 5 endpoints, 18 tests |
-| **transaction-service** | ✅ Done | 12 endpoints, 27 tests |
-| **ledger-service** | ✅ Done | 7 endpoints, 26 tests |
-| **report-service** | ✅ Done | 5 endpoints, 18 tests |
+| **auth-service** | ✅ Done | 4 endpoints, 15 tests; org membership eager-load in /me |
+| **user-service** | ✅ Done | 12 endpoints (5 user + 7 org CRUD), 30 tests |
+| **transaction-service** | ✅ Done | 12 endpoints, 27 tests; org_id scoped |
+| **ledger-service** | ✅ Done | 7 endpoints, 26 tests; org_id scoped |
+| **report-service** | ✅ Done | 5 endpoints, 18 tests; org_id scoped |
 | **notification-service** | ✅ Done | 3 endpoints, 12 tests |
 | **ai-service** | ✅ Done | 3 endpoints, 16 tests |
 | **sync-service** | ✅ Done | 3 endpoints, 14 tests |
-| **database** | ✅ Done | schema.sql, 2 Alembic migrations, 29 seed categories |
-| **CI/CD** | ✅ Done | test, lint, build (GHCR + Trivy), deploy (smoke + rollback), terraform-lint |
-| **apps/mobile-app** | ✅ Done | Flutter — 6 screens, 43 Dart files, offline sync |
-| **apps/web-dashboard** | ✅ Done | Next.js 14 — 6 tabs, TypeScript, Recharts |
-| **infrastructure/kubernetes** | ✅ Done | Kustomize base + staging/production overlays; PDB, HPA, ResourceQuota, TLS |
+| **database** | ✅ Done | schema.sql, 5 Alembic migrations, 29 seed categories, organisations + org_memberships tables |
+| **CI/CD** | ✅ Done | test + lint + build (GHCR + Trivy) + deploy (smoke + rollback) + terraform-lint + 60% coverage gate + Slack alerts |
+| **apps/mobile-app** | ✅ Done | Flutter — 6 screens, 43 Dart files, offline sync, cert pinning |
+| **apps/web-dashboard** | ✅ Done | Next.js 14 — 6 tabs + admin infra tab, TypeScript, Recharts |
+| **infrastructure/kubernetes** | ✅ Done | Kustomize base + staging/production overlays; PDB, HPA, ResourceQuota, TLS, NetworkPolicies |
 | **infrastructure/terraform** | ✅ Done | 6 GCP modules (VPC, GKE, CloudSQL, Memorystore, Storage, IAM) |
-| **GCP staging** | ✅ Live | All 8 services running in `ledgerlite-staging`, 2 migrations applied |
+| **GCP staging** | ✅ Live | All 8 services running in `ledgerlite-staging`, 5 migrations applied |
+| **multi-user orgs** | ✅ Done | Backend complete (organisations + org_memberships, `get_org_member`, org CRUD, org_id scoping all data services); web/mobile UI → Sprint 15 |
 
-**146 tests passing. GCP staging live. main tagged `sprint-11-done`.**
+**158 tests passing. GCP staging live. main at `sprint-14-done` (`abf6392`).**
 
 ---
 
@@ -487,9 +488,10 @@ Legend: ✅ Done · 🔶 Stub/partial · 🔲 Planned · N/A Not applicable
 | Sprint 9 | Next.js web dashboard (6 tabs) | ✅ Done | `sprint-9-done` |
 | Sprint 10 | GCP staging deploy — all 8 services live | ✅ Done | `sprint-10-done` |
 | Sprint 11 | HA + TLS + CI hardening (13 tech-debt items) | ✅ Done | `sprint-11-done` |
-| **Sprint 12** | **Data reliability + app correctness + cost visibility** | 🔲 Next | — |
-| Sprint 13 | Security hardening + observability + admin cost dashboard | 🔲 | — |
-| Sprint 14 | Help Centre + documentation hub | 🔲 | — |
+| Sprint 12 | Data reliability + app correctness + cost visibility | ✅ Done | `sprint-12-done` |
+| Sprint 13 | Security hardening + observability + admin cost dashboard + RBAC | ✅ Done | `sprint-13-rbac-baseline` |
+| **Sprint 14** | **Multi-user organisations (backend)** | ✅ Done | `sprint-14-done` |
+| Sprint 15 | Org switching UI (web + mobile) | 🔲 Next | — |
 | Phase 2 | Growth features | 🔲 | — |
 | Phase 3 | Scale + platform | 🔲 | — |
 | Phase 4 | Embedded finance | 🔲 | — |
