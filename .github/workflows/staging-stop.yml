@@ -9,6 +9,10 @@ on:
   schedule:
     - cron: "0 22 * * *"
 
+permissions:
+  id-token: write   # required for Workload Identity Federation OIDC token
+  contents: read
+
 env:
   PROJECT_ID: project-6737f3c2-e011-49b7-ae4
   REGION: us-central1
@@ -20,24 +24,16 @@ jobs:
   stop:
     name: Stop staging GKE + Cloud SQL
     runs-on: ubuntu-latest
-    # Requires GCP_SA_KEY repo secret. Add via:
-    # gh secret set GCP_SA_KEY --body "$(cat path/to/sa-key.json)"
-    # See docs/operations/github-secrets-setup.md for full instructions.
+    # Auth via Workload Identity Federation (no long-lived keys needed).
+    # Requires WIF_PROVIDER and WIF_SERVICE_ACCOUNT repo secrets.
+    # See docs/operations/github-secrets-setup.md §6 for setup.
 
     steps:
-      - name: Check GCP credentials available
-        run: |
-          if [ -z "${{ secrets.GCP_SA_KEY }}" ]; then
-            echo "❌ GCP_SA_KEY repo secret not configured."
-            echo "   Run: gh secret set GCP_SA_KEY --body \"\$(cat sa-key.json)\""
-            echo "   See docs/operations/github-secrets-setup.md"
-            exit 1
-          fi
-
-      - name: Authenticate to GCP
+      - name: Authenticate to GCP (Workload Identity Federation)
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
 
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
