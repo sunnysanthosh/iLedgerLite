@@ -2,6 +2,7 @@ import uuid
 
 from db import get_db
 from fastapi import APIRouter, Depends, Query
+from models.org import OrgMembership
 from models.user import User
 from schemas.notification import (
     MarkReadResponse,
@@ -10,7 +11,7 @@ from schemas.notification import (
     ReminderRequest,
 )
 from services.notification_service import create_reminder, list_notifications, mark_as_read
-from services.security import get_current_user
+from services.security import get_current_user, get_org_member
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
@@ -21,11 +22,11 @@ async def list_notifications_endpoint(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     unread_only: bool = Query(False),
-    user: User = Depends(get_current_user),
+    membership: OrgMembership = Depends(get_org_member),
     db: AsyncSession = Depends(get_db),
 ):
     notifications, total, unread_count = await list_notifications(
-        user.id,
+        membership.org_id,
         db,
         skip=skip,
         limit=limit,
@@ -53,7 +54,7 @@ async def mark_read_endpoint(
 @router.post("/reminder", response_model=NotificationResponse, status_code=201)
 async def send_reminder_endpoint(
     data: ReminderRequest,
-    user: User = Depends(get_current_user),
+    membership: OrgMembership = Depends(get_org_member),
     db: AsyncSession = Depends(get_db),
 ):
-    return await create_reminder(user.id, data.customer_id, data.message, db)
+    return await create_reminder(membership.user_id, membership.org_id, data.customer_id, data.message, db)

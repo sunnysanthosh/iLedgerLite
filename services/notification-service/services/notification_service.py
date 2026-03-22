@@ -11,14 +11,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 
 async def list_notifications(
-    user_id: uuid.UUID,
+    org_id: uuid.UUID,
     db: AsyncSession,
     skip: int = 0,
     limit: int = 20,
     unread_only: bool = False,
 ) -> tuple[list[Notification], int, int]:
     """Returns (notifications, total_count, unread_count)."""
-    base = select(Notification).where(Notification.user_id == user_id)
+    base = select(Notification).where(Notification.org_id == org_id)
 
     if unread_only:
         base = base.where(Notification.is_read.is_(False))
@@ -30,7 +30,7 @@ async def list_notifications(
 
     # Unread count (always total unread, regardless of filter)
     unread_q = select(func.count()).where(
-        Notification.user_id == user_id,
+        Notification.org_id == org_id,
         Notification.is_read.is_(False),
     )
     unread_result = await db.execute(unread_q)
@@ -71,13 +71,14 @@ async def mark_as_read(
 
 async def create_reminder(
     user_id: uuid.UUID,
+    org_id: uuid.UUID,
     customer_id: uuid.UUID,
     custom_message: str | None,
     db: AsyncSession,
 ) -> Notification:
     """Create a credit reminder notification for a customer with outstanding balance."""
-    # Verify customer belongs to user
-    cust_result = await db.execute(select(Customer).where(Customer.id == customer_id, Customer.user_id == user_id))
+    # Verify customer belongs to org
+    cust_result = await db.execute(select(Customer).where(Customer.id == customer_id, Customer.org_id == org_id))
     customer = cust_result.scalars().first()
     if customer is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
@@ -95,7 +96,7 @@ async def create_reminder(
             ).label("total_credit"),
         ).where(
             LedgerEntry.customer_id == customer_id,
-            LedgerEntry.user_id == user_id,
+            LedgerEntry.org_id == org_id,
             LedgerEntry.is_settled.is_(False),
         )
     )
@@ -116,6 +117,7 @@ async def create_reminder(
     notification = Notification(
         id=uuid.uuid4(),
         user_id=user_id,
+        org_id=org_id,
         type="reminder",
         title=f"Payment reminder for {customer.name}",
         message=message,

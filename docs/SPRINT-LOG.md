@@ -698,3 +698,64 @@ alembic history
 - Flutter mobile: `AuthState.organisations`, `TokenStorage.getCurrentOrgId()`, `AuthInterceptor` header injection, `/org-selection` route + screen
 - Org scoping for ai-service, notification-service, sync-service
 - `org_id NOT NULL` constraint (after all services verified in production)
+
+---
+
+## Sprint 15 — Org UI Layer + Remaining Service Org Scoping (Completed — `sprint-15-done`)
+
+**Goal:** Complete the org feature end-to-end: wire `X-Org-ID` into web dashboard, Flutter mobile, and scope the three remaining backend services (ai, notification, sync) to org_id.
+
+**Delivered:**
+
+### Web Dashboard
+- `types/api.ts`: `OrgRef`, `OrgMemberResponse`, `OrgResponse`, `OrgMemberInvite`, `OrgMemberPatch` interfaces; `UserProfile.organisations?: OrgRef[]`
+- `lib/store/auth-store.ts`: `currentOrgId` + `organisations` in Zustand state; `setCurrentOrg` + `setOrganisations` actions; both persisted in `ledgerlite-auth` localStorage key
+- `components/layout/org-switcher.tsx` (NEW): dropdown visible only when `organisations.length > 1`; on select calls `setCurrentOrg` + invalidates all React Query caches
+- `components/layout/sidebar.tsx`: renders `<OrgSwitcher />` above nav
+- `lib/api/client.ts`: injects `X-Org-ID` header on every request from persisted store
+- `lib/api/orgs.ts` (NEW): `getOrg`, `listOrgMembers`, `inviteMember`, `updateMemberRole`, `removeMember` API wrappers
+- `app/(dashboard)/settings/org/page.tsx` (NEW): org management UI — member list with role dropdown + remove, invite-by-email form (hidden for personal orgs)
+- `app/(dashboard)/layout.tsx`: hydrates `organisations` from `/auth/me` if store is empty
+
+### Flutter Mobile
+- `auth_provider.dart`: `AuthState.organisations` + `currentOrgId`; `login()`/`register()` parse orgs; `switchOrganisation(id)` method; `logout()` clears org
+- `token_storage.dart`: `saveCurrentOrgId` / `getCurrentOrgId` / `clearOrgId` (flutter_secure_storage)
+- `auth_interceptor.dart`: injects `X-Org-ID` from `_tokenStorage.getCurrentOrgId()` in `onRequest`
+- `app_router.dart`: `/org-selection` route; redirect to `/org-selection` if `organisations.length > 1` and `currentOrgId == null`
+- `features/orgs/screens/org_selection_screen.dart` (NEW): tap-to-select list with role badges; `switchOrganisation(id)` → `/dashboard`
+
+### Backend — ai-service
+- `models/org.py` (NEW): read-only `Organisation` + `OrgMembership` ORM
+- `models/transaction.py` + `models/category.py`: added `org_id` column
+- `services/security.py`: added `get_org_member` dependency (same pattern as report-service)
+- `services/ai_service.py`: `categorize_transaction` + `get_spending_insights` now scoped to `org_id`; system categories matched by `org_id IS NULL`
+- `routers/ai.py`: `categorize` + `insights` use `get_org_member`; `ocr` keeps `get_current_user`
+- `tests/conftest.py`: seeds org + membership; `auth_headers` includes `X-Org-ID`; `seed_transactions` sets `org_id`
+
+### Backend — notification-service
+- `models/org.py` (NEW): read-only ORM
+- `models/notification.py` + `models/customer.py` + `models/ledger_entry.py`: added `org_id`
+- `services/security.py`: added `get_org_member`
+- `services/notification_service.py`: `list_notifications` scoped to `org_id`; `create_reminder` uses `org_id` for customer + ledger_entry lookup; notification created with `org_id`
+- `routers/notifications.py`: `list` + `send_reminder` use `get_org_member`; `mark_read` keeps `get_current_user` (ownership stays user-scoped)
+- `tests/conftest.py`: seeds orgs + memberships for all shared users; `org_id` on customers, ledger_entries, notifications
+
+### Backend — sync-service
+- `models/org.py` (NEW): read-only ORM
+- `models/transaction.py` + `models/ledger_entry.py`: added `org_id`
+- `services/security.py`: added `get_org_member`
+- `services/sync_service.py`: `push_changes` upserts/creates by `org_id`; `pull_changes` fetches by `org_id`; `get_sync_status` counts pending changes by `org_id`; `SyncLog` stays user+device scoped
+- `routers/sync.py`: all 3 endpoints use `get_org_member`; pass `membership.user_id` + `membership.org_id`
+- `tests/conftest.py`: seeds org + membership; `auth_headers` includes `X-Org-ID`; `seed_server_transactions` sets `org_id`
+
+**Tests:** 158 passing (16 ai + 12 notification + 14 sync + unchanged 116 from other services). Lint clean.
+
+**Key decisions:**
+- SyncLog stays `user_id`-scoped (per-device per-user tracking, not org-level)
+- Notification `mark_as_read` stays `user_id`-scoped (ownership of a notification is per-user)
+- System categories (`org_id IS NULL`) still match for all orgs — same pattern as `user_id IS NULL` before
+
+**Deferred to Sprint 16:**
+- `org_id NOT NULL` constraints (after all services verified in production)
+- Org invitation email notifications
+- Audit log for org actions

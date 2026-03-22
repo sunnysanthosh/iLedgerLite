@@ -10,6 +10,7 @@ from models.base import Base
 from models.customer import Customer  # noqa: F401 — register with Base
 from models.ledger_entry import LedgerEntry  # noqa: F401
 from models.notification import Notification
+from models.org import Organisation, OrgMembership  # noqa: F401 — register with Base
 from models.user import User
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -85,6 +86,28 @@ async def seed_user(db_session: AsyncSession) -> User:
     )
     db_session.add(user)
     await db_session.flush()
+
+    org = Organisation(
+        id=_uuid_mod.uuid4(),
+        name="Notification User's Personal",
+        owner_id=user.id,
+        is_personal=True,
+        is_active=True,
+    )
+    db_session.add(org)
+    await db_session.flush()
+
+    membership = OrgMembership(
+        id=_uuid_mod.uuid4(),
+        org_id=org.id,
+        user_id=user.id,
+        role="owner",
+        is_active=True,
+    )
+    db_session.add(membership)
+    await db_session.flush()
+
+    user._org_id = org.id  # type: ignore[attr-defined]  # transient Python attr
     await db_session.refresh(user)
     return user
 
@@ -92,15 +115,31 @@ async def seed_user(db_session: AsyncSession) -> User:
 @pytest.fixture
 def auth_headers(seed_user: User) -> dict:
     token = make_access_token(str(seed_user.id))
-    return {"Authorization": f"Bearer {token}"}
+    return {
+        "Authorization": f"Bearer {token}",
+        "X-Org-ID": str(seed_user._org_id),  # type: ignore[attr-defined]
+    }
 
 
 @pytest.fixture
 async def seed_full_data(db_session: AsyncSession):
     """Seed shared users, customers, and ledger entries from shared.test_data."""
-    from shared.test_data import CUSTOMERS, LEDGER_ENTRIES, USERS
+    from shared.test_data import (
+        CUSTOMERS,
+        LEDGER_ENTRIES,
+        ORG_ANITA_ID,
+        ORG_ARJUN_ID,
+        ORG_MEENA_ID,
+        ORG_MEMBER_IDS,
+        ORG_PRIYA_ID,
+        ORG_RAJESH_ID,
+        ORG_VIKRAM_ID,
+        USER_ORG_MAP,
+        USERS,
+    )
 
-    for u in USERS:
+    org_ids = [ORG_PRIYA_ID, ORG_RAJESH_ID, ORG_ANITA_ID, ORG_VIKRAM_ID, ORG_MEENA_ID, ORG_ARJUN_ID]
+    for u, org_id_str, member_id_str in zip(USERS, org_ids, ORG_MEMBER_IDS):
         db_session.add(
             User(
                 id=_id(u["id"]),
@@ -113,11 +152,34 @@ async def seed_full_data(db_session: AsyncSession):
         )
         await db_session.flush()
 
+        db_session.add(
+            Organisation(
+                id=_id(org_id_str),
+                name=f"{u['full_name']}'s Personal",
+                owner_id=_id(u["id"]),
+                is_personal=True,
+                is_active=True,
+            )
+        )
+        await db_session.flush()
+
+        db_session.add(
+            OrgMembership(
+                id=_id(member_id_str),
+                org_id=_id(org_id_str),
+                user_id=_id(u["id"]),
+                role="owner",
+                is_active=True,
+            )
+        )
+        await db_session.flush()
+
     for c in CUSTOMERS:
         db_session.add(
             Customer(
                 id=_id(c["id"]),
                 user_id=_id(c["user_id"]),
+                org_id=_id(USER_ORG_MAP[c["user_id"]]),
                 name=c["name"],
                 phone=c["phone"],
                 email=c["email"],
@@ -131,6 +193,7 @@ async def seed_full_data(db_session: AsyncSession):
             LedgerEntry(
                 id=_id(e["id"]),
                 user_id=_id(e["user_id"]),
+                org_id=_id(USER_ORG_MAP[e["user_id"]]),
                 customer_id=_id(e["customer_id"]),
                 type=e["type"],
                 amount=e["amount"],
@@ -145,11 +208,12 @@ async def seed_full_data(db_session: AsyncSession):
 @pytest.fixture
 async def seed_customer_no_balance(db_session: AsyncSession, seed_full_data) -> Customer:
     """A customer belonging to Rajesh with no ledger entries (zero outstanding)."""
-    from shared.test_data import USER_RAJESH_ID
+    from shared.test_data import ORG_RAJESH_ID, USER_RAJESH_ID
 
     cust = Customer(
         id=_uuid_mod.uuid4(),
         user_id=_id(USER_RAJESH_ID),
+        org_id=_id(ORG_RAJESH_ID),
         name="Test Zero-Balance Customer",
         phone="+910000000000",
         email=None,
@@ -164,12 +228,13 @@ async def seed_customer_no_balance(db_session: AsyncSession, seed_full_data) -> 
 @pytest.fixture
 async def seed_notifications(db_session: AsyncSession, seed_full_data) -> list[Notification]:
     """Create test notifications for Rajesh (from shared seed data)."""
-    from shared.test_data import CUST_SURESH_TEXTILES_ID, USER_RAJESH_ID
+    from shared.test_data import CUST_SURESH_TEXTILES_ID, ORG_RAJESH_ID, USER_RAJESH_ID
 
     notifs = [
         Notification(
             id=_uuid_mod.uuid4(),
             user_id=_id(USER_RAJESH_ID),
+            org_id=_id(ORG_RAJESH_ID),
             type="system",
             title="Welcome",
             message="Welcome to LedgerLite!",
@@ -178,6 +243,7 @@ async def seed_notifications(db_session: AsyncSession, seed_full_data) -> list[N
         Notification(
             id=_uuid_mod.uuid4(),
             user_id=_id(USER_RAJESH_ID),
+            org_id=_id(ORG_RAJESH_ID),
             type="reminder",
             title="Payment due",
             message="Suresh Textiles owes 23000",
@@ -187,6 +253,7 @@ async def seed_notifications(db_session: AsyncSession, seed_full_data) -> list[N
         Notification(
             id=_uuid_mod.uuid4(),
             user_id=_id(USER_RAJESH_ID),
+            org_id=_id(ORG_RAJESH_ID),
             type="overdue",
             title="Overdue payment",
             message="Lakshmi Stores payment overdue",
