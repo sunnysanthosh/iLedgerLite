@@ -103,16 +103,27 @@ cat /tmp/ledgerlite-ci-key.json | pbcopy
 rm /tmp/ledgerlite-ci-key.json
 ```
 
-### Add to GitHub staging environment
+### Add to GitHub as a repo-level secret
 
-Go to: **GitHub → repo → Settings → Environments → staging → Add secret**
+```bash
+# Fastest method — paste directly from clipboard (step 3 above)
+gh secret set GCP_SA_KEY --body "$(pbpaste)"
+# OR pipe from file
+gh secret set GCP_SA_KEY < /tmp/ledgerlite-ci-key.json
+```
+
+Or via the UI: **GitHub → repo → Settings → Secrets and variables → Actions → New repository secret**
 
 | Secret name | Value |
 |---|---|
-| `GCP_SA_KEY` | Paste the JSON key content from step 3 |
+| `GCP_SA_KEY` | The full JSON key content |
 
-> Do NOT add `GCP_SA_KEY` to the `production` environment — the CI SA is staging-only.
-> Production GKE is always-on and should never be scaled to 0 from CI.
+> **Why repo-level and not environment-scoped?** The staging-start/stop and cost-snapshot
+> workflows do not require approval gates — they are utility workflows. Using a repo-level
+> secret avoids the `environment:` protection check that was previously causing every run
+> to fail silently when the secret was absent.
+>
+> Production GKE is always-on — do not add scale-to-zero automation for production.
 
 ### Verify the workflow runs
 
@@ -142,8 +153,9 @@ To start staging for a test session:
 | Workflow | Environment | Secrets used |
 |---|---|---|
 | `deploy.yml` | staging / production | `KUBECONFIG`, `DB_PASSWORD`, `JWT_SECRET`, `DATABASE_URL` |
-| `staging-start.yml` | staging | `GCP_SA_KEY` |
-| `staging-stop.yml` | staging | `GCP_SA_KEY` |
+| `staging-start.yml` | (repo-level) | `GCP_SA_KEY` |
+| `staging-stop.yml` | (repo-level) | `GCP_SA_KEY` |
+| `cost-snapshot.yml` | (repo-level) | `GCP_SA_KEY` (optional — degrades gracefully if absent) |
 | `build.yml` | (repo-level) | `GITHUB_TOKEN` (automatic) |
 | `test.yml` | (repo-level) | none |
 | `lint.yml` | (repo-level) | none |

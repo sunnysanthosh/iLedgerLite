@@ -91,10 +91,11 @@ Fixed costs (LB $18, Router $7, Storage $1) are unavoidable regardless of on/off
 
 | Sprint | Staging Cost | Production Cost | Notes |
 |---|---|---|---|
-| Sprint 10 | ~$71–144/mo | — | GCP staging first deployed |
-| Sprint 11 | ~$71–144/mo | — | No new GCP resources added |
-| Sprint 12 | TBD (~$32–49/mo) | — | Budget Alerts (TD-32) + on-demand stop/start (TD-33) |
-| Sprint 13 | TBD | — | Admin cost dashboard live (FT-01) |
+| Sprint 10 | ~$71–144/mo | — | GCP staging first deployed; always-on |
+| Sprint 11 | ~$71–144/mo | — | Always-on; nightly-stop cron added but GCP_SA_KEY missing so it never ran |
+| Sprint 12 | ~$71–144/mo | — | Budget Alerts configured; nightly-stop still failing (GCP_SA_KEY not in CI) |
+| Sprint 13 | ~$71–144/mo | — | Always-on; admin cost dashboard live (FT-01) |
+| Sprint 14 | ~$71–144/mo → $0 compute | — | Hibernated 2026-03-22: GKE=0 nodes, SQL=STOPPED; GCP_SA_KEY bug fixed |
 
 ---
 

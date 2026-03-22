@@ -27,9 +27,20 @@ jobs:
   start:
     name: Start staging GKE + Cloud SQL
     runs-on: ubuntu-latest
-    environment: staging
+    # Requires GCP_SA_KEY repo secret. Add via:
+    # gh secret set GCP_SA_KEY --body "$(cat path/to/sa-key.json)"
+    # See docs/operations/github-secrets-setup.md for full instructions.
 
     steps:
+      - name: Check GCP credentials available
+        run: |
+          if [ -z "${{ secrets.GCP_SA_KEY }}" ]; then
+            echo "❌ GCP_SA_KEY repo secret not configured."
+            echo "   Run: gh secret set GCP_SA_KEY --body \"\$(cat sa-key.json)\""
+            echo "   See docs/operations/github-secrets-setup.md"
+            exit 1
+          fi
+
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
         with:
