@@ -16,20 +16,23 @@ async def _reload_entry(entry_id: uuid.UUID, db: AsyncSession) -> LedgerEntry:
     return result.scalars().first()
 
 
-async def _verify_customer_ownership(customer_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSession) -> Customer:
-    result = await db.execute(select(Customer).where(Customer.id == customer_id, Customer.user_id == user_id))
+async def _verify_customer_org(customer_id: uuid.UUID, org_id: uuid.UUID, db: AsyncSession) -> Customer:
+    result = await db.execute(select(Customer).where(Customer.id == customer_id, Customer.org_id == org_id))
     customer = result.scalars().first()
     if customer is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
     return customer
 
 
-async def create_ledger_entry(user_id: uuid.UUID, data: LedgerEntryCreate, db: AsyncSession) -> LedgerEntry:
-    await _verify_customer_ownership(data.customer_id, user_id, db)
+async def create_ledger_entry(
+    user_id: uuid.UUID, org_id: uuid.UUID, data: LedgerEntryCreate, db: AsyncSession
+) -> LedgerEntry:
+    await _verify_customer_org(data.customer_id, org_id, db)
 
     entry = LedgerEntry(
         id=uuid.uuid4(),
         user_id=user_id,
+        org_id=org_id,
         customer_id=data.customer_id,
         type=data.type,
         amount=data.amount,
@@ -43,17 +46,17 @@ async def create_ledger_entry(user_id: uuid.UUID, data: LedgerEntryCreate, db: A
 
 async def get_ledger_history(
     customer_id: uuid.UUID,
-    user_id: uuid.UUID,
+    org_id: uuid.UUID,
     db: AsyncSession,
     skip: int = 0,
     limit: int = 20,
 ) -> tuple[list[LedgerEntry], int, Decimal, Decimal, Decimal]:
     """Returns (entries, total, total_debit, total_credit, outstanding_balance)."""
-    await _verify_customer_ownership(customer_id, user_id, db)
+    await _verify_customer_org(customer_id, org_id, db)
 
     base = select(LedgerEntry).where(
         LedgerEntry.customer_id == customer_id,
-        LedgerEntry.user_id == user_id,
+        LedgerEntry.org_id == org_id,
     )
 
     # Count
@@ -89,7 +92,7 @@ async def get_ledger_history(
             ).label("total_credit"),
         ).where(
             LedgerEntry.customer_id == customer_id,
-            LedgerEntry.user_id == user_id,
+            LedgerEntry.org_id == org_id,
             LedgerEntry.is_settled.is_(False),
         )
     )
@@ -102,9 +105,9 @@ async def get_ledger_history(
 
 
 async def update_ledger_entry(
-    entry_id: uuid.UUID, user_id: uuid.UUID, data: LedgerEntryUpdate, db: AsyncSession
+    entry_id: uuid.UUID, org_id: uuid.UUID, data: LedgerEntryUpdate, db: AsyncSession
 ) -> LedgerEntry:
-    result = await db.execute(select(LedgerEntry).where(LedgerEntry.id == entry_id, LedgerEntry.user_id == user_id))
+    result = await db.execute(select(LedgerEntry).where(LedgerEntry.id == entry_id, LedgerEntry.org_id == org_id))
     entry = result.scalars().first()
     if entry is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ledger entry not found")

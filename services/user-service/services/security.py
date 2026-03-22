@@ -2,9 +2,10 @@ import uuid
 
 from config import settings
 from db import get_db
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
+from models.org import Organisation, OrgMembership
 from models.user import User
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -49,3 +50,35 @@ async def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account is deactivated")
 
     return user
+
+
+async def get_org_member(
+    x_org_id: str | None = Header(None, alias="X-Org-ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> OrgMembership:
+    """Resolve the active org membership for the current user.
+
+    If X-Org-ID header is present, verify membership in that specific org.
+    Otherwise fall back to the user's personal org.
+    Returns 403 if membership is not found.
+    """
+    q = (
+        select(OrgMembership)
+        .options(selectinload(OrgMembership.organisation))
+        .where(OrgMembership.user_id == current_user.id, OrgMembership.is_active.is_(True))
+    )
+    if x_org_id:
+        try:
+            org_uuid = uuid.UUID(x_org_id)
+        except ValueError:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid X-Org-ID format")
+        q = q.where(OrgMembership.org_id == org_uuid)
+    else:
+        q = q.join(Organisation).where(Organisation.is_personal.is_(True))
+
+    result = await db.execute(q.execution_options(populate_existing=True))
+    membership = result.scalars().first()
+    if membership is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a member of this organisation")
+    return membership

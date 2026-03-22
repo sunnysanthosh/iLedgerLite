@@ -2,30 +2,30 @@
 
 **Audience:** Engineers adding features to LedgerLite
 **Classification:** Internal — safe to commit
-Last updated: 2026-03-14
+Last updated: 2026-03-22
 
 ---
 
 ## 1. Role Model
 
-LedgerLite uses a two-tier role model today, with a planned three-tier org model for multi-user support.
+LedgerLite uses a three-tier role model — base user roles plus org-level membership roles implemented in Sprint 14.
 
-### Current roles
+### Base roles
 
 | Role | Where stored | Who has it | Grants access to |
 |---|---|---|---|
-| `user` | Every authenticated JWT | All registered users | Own accounts, transactions, ledger, reports, settings |
+| `user` | Every authenticated JWT | All registered users | Own org's accounts, transactions, ledger, reports, settings |
 | `admin` | `users.is_admin` (DB) or `ADMIN_EMAILS` env var | Founders / ops only | Everything `user` can do + `/infra` page |
 
-### Future roles (planned — Sprint 14+)
+### Org membership roles (Sprint 14 — live)
 
 | Role | Description | Grants access to |
 |---|---|---|
-| `org_owner` | Created the organisation | Full CRUD on all org data + invite/remove members |
-| `org_member` | Invited to an org | Own data + org-shared data per owner grant |
-| `read_only` | Accountant / auditor access | Read-only on ledger, reports, transactions |
+| `owner` | Created the organisation | Full CRUD on all org data + invite/remove/change-role on members |
+| `member` | Invited to an org | Full CRUD on org data (cannot manage members) |
+| `read_only` | Accountant / auditor access | Read-only on all org data (GET only) |
 
-**Current implementation:** Only `user` and `admin` are enforced. Org roles are a future database migration (`organisations`, `org_memberships` tables).
+**Implementation:** `organisations` + `org_memberships` tables (Alembic migrations 004 + 005). Every user automatically has a personal org (`is_personal=True`) created at registration. The active org is selected via the `X-Org-ID` HTTP header; if absent, the server falls back to the user's personal org — ensuring backward compatibility.
 
 ---
 
@@ -239,40 +239,56 @@ async function fetchUserResource(token: string): Promise<Resource[]> {
 
 ---
 
-## 8. Future: Adding an Org Role Check
+## 8. Org Role Check — `get_org_member` Dependency (Sprint 14)
 
-When multi-user orgs are implemented (Sprint 14+), the pattern extends as follows.
+The `get_org_member` FastAPI dependency is now live in all data services (user, transaction, ledger, report). It reads the `X-Org-ID` request header, validates the caller's org membership, and returns the `OrgMembership` record for downstream role checks.
 
-**Backend — new dependency:**
+**Backend — implemented dependency:**
 ```python
 async def get_org_member(
+    x_org_id: str | None = Header(None, alias="X-Org-ID"),
     current_user: User = Depends(get_current_user),
-    org_id: uuid.UUID = Path(...),
     db: AsyncSession = Depends(get_db),
 ) -> OrgMembership:
-    membership = await db.scalar(
-        select(OrgMembership).where(
-            OrgMembership.org_id == org_id,
-            OrgMembership.user_id == current_user.id,
-            OrgMembership.is_active == True,
-        )
+    q = (
+        select(OrgMembership)
+        .options(selectinload(OrgMembership.organisation))
+        .where(OrgMembership.user_id == current_user.id, OrgMembership.is_active.is_(True))
     )
-    if not membership:
+    if x_org_id:
+        q = q.where(OrgMembership.org_id == uuid.UUID(x_org_id))
+    else:
+        # Fall back to personal org (backward compat — no header required)
+        q = q.join(Organisation, OrgMembership.org_id == Organisation.id).where(
+            Organisation.is_personal.is_(True)
+        )
+    result = await db.execute(q.execution_options(populate_existing=True))
+    membership = result.scalars().first()
+    if membership is None:
         raise HTTPException(status_code=403, detail="Not a member of this organisation")
     return membership
 
-@router.get("/org/{org_id}/ledger")
-async def get_org_ledger(
+@router.get("/accounts")
+async def list_accounts(
     membership: OrgMembership = Depends(get_org_member),
     db: AsyncSession = Depends(get_db),
 ):
     # membership.role is "owner" | "member" | "read_only"
-    ...
+    # membership.org_id scopes all queries
+    return await account_service.list_accounts(membership.org_id, db)
 ```
 
-**Server-side role check helper (to be created):**
+**Owner-only guard example (user-service org endpoints):**
+```python
+if membership.role != "owner":
+    raise HTTPException(status_code=403, detail="Only org owners can perform this action")
+```
+
+**Client-side — send `X-Org-ID` header (Sprint 15 for UI; already in test fixtures):**
 ```typescript
-// Future: resolveOrgRole(token, orgId) → "owner" | "member" | "read_only" | null
+// lib/api/client.ts — inject on every request
+const orgId = useAuthStore.getState().currentOrgId
+if (orgId) headers["X-Org-ID"] = orgId
 ```
 
 ---
@@ -284,7 +300,7 @@ async def get_org_ledger(
 3. **`ADMIN_EMAILS` is never `NEXT_PUBLIC_`.** Keep it server-only.
 4. **Always set a timeout** (`AbortSignal.timeout(5000)`) on auth-service calls.
 5. **Identical error messages** for 401 and 403 at the response level when caller shouldn't know which is which. (The distinction between "not logged in" vs "not admin" is acceptable to expose here.)
-6. **User-scoped queries always.** Regular user routes filter by `user_id` at the database level — no application-layer filtering.
+6. **Org-scoped queries always.** All data routes filter by `org_id = membership.org_id` at the database level — no application-layer filtering. (`user_id` is kept on rows for audit only.)
 7. **Rotate `JWT_SECRET` immediately** if compromised. See `docs/admin/ADMIN-RUNBOOK.md` (local-only).
 
 ---

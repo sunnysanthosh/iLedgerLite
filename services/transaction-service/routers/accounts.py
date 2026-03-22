@@ -1,6 +1,8 @@
+import uuid
+
 from db import get_db
 from fastapi import APIRouter, Depends, status
-from models.user import User
+from models.org import OrgMembership
 from schemas.account import AccountCreate, AccountResponse, AccountUpdate
 from services.account_service import (
     create_account,
@@ -9,7 +11,7 @@ from services.account_service import (
     list_accounts,
     update_account,
 )
-from services.security import get_current_user
+from services.security import get_org_member
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/accounts", tags=["accounts"])
@@ -18,50 +20,44 @@ router = APIRouter(prefix="/accounts", tags=["accounts"])
 @router.post("", response_model=AccountResponse, status_code=status.HTTP_201_CREATED)
 async def create(
     data: AccountCreate,
-    current_user: User = Depends(get_current_user),
+    membership: OrgMembership = Depends(get_org_member),
     db: AsyncSession = Depends(get_db),
 ):
-    return await create_account(current_user.id, data, db)
+    return await create_account(membership.user_id, membership.org_id, data, db)
 
 
 @router.get("", response_model=list[AccountResponse])
 async def list_all(
-    current_user: User = Depends(get_current_user),
+    membership: OrgMembership = Depends(get_org_member),
     db: AsyncSession = Depends(get_db),
 ):
-    return await list_accounts(current_user.id, db)
+    return await list_accounts(membership.org_id, db)
 
 
 @router.get("/{account_id}", response_model=AccountResponse)
 async def get_one(
-    account_id: str,
-    current_user: User = Depends(get_current_user),
+    account_id: uuid.UUID,
+    membership: OrgMembership = Depends(get_org_member),
     db: AsyncSession = Depends(get_db),
 ):
-    import uuid
-
-    return await get_account(uuid.UUID(account_id), current_user.id, db)
+    return await get_account(account_id, membership.org_id, db)
 
 
 @router.put("/{account_id}", response_model=AccountResponse)
 async def update(
-    account_id: str,
+    account_id: uuid.UUID,
     data: AccountUpdate,
-    current_user: User = Depends(get_current_user),
+    membership: OrgMembership = Depends(get_org_member),
     db: AsyncSession = Depends(get_db),
 ):
-    import uuid
-
-    return await update_account(uuid.UUID(account_id), current_user.id, data, db)
+    return await update_account(account_id, membership.org_id, data, db)
 
 
 @router.delete("/{account_id}", status_code=status.HTTP_200_OK)
 async def deactivate(
-    account_id: str,
-    current_user: User = Depends(get_current_user),
+    account_id: uuid.UUID,
+    membership: OrgMembership = Depends(get_org_member),
     db: AsyncSession = Depends(get_db),
 ):
-    import uuid
-
-    await deactivate_account(uuid.UUID(account_id), current_user.id, db)
+    await deactivate_account(account_id, membership.org_id, db)
     return {"detail": "Account deactivated"}

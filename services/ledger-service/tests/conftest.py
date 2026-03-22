@@ -8,6 +8,7 @@ from httpx import ASGITransport, AsyncClient
 from jose import jwt
 from models.base import Base
 from models.customer import Customer
+from models.org import Organisation, OrgMembership
 from models.user import User
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -75,6 +76,28 @@ async def seed_user(db_session: AsyncSession) -> User:
     )
     db_session.add(user)
     await db_session.flush()
+
+    org = Organisation(
+        id=uuid.uuid4(),
+        name="Ledger User's Personal",
+        owner_id=user.id,
+        is_personal=True,
+        is_active=True,
+    )
+    db_session.add(org)
+    await db_session.flush()
+
+    membership = OrgMembership(
+        id=uuid.uuid4(),
+        org_id=org.id,
+        user_id=user.id,
+        role="owner",
+        is_active=True,
+    )
+    db_session.add(membership)
+    await db_session.flush()
+
+    user._org_id = org.id  # type: ignore[attr-defined]
     await db_session.refresh(user)
     return user
 
@@ -82,7 +105,10 @@ async def seed_user(db_session: AsyncSession) -> User:
 @pytest.fixture
 def auth_headers(seed_user: User) -> dict:
     token = make_access_token(str(seed_user.id))
-    return {"Authorization": f"Bearer {token}"}
+    return {
+        "Authorization": f"Bearer {token}",
+        "X-Org-ID": str(seed_user._org_id),  # type: ignore[attr-defined]
+    }
 
 
 @pytest.fixture
@@ -90,6 +116,7 @@ async def seed_customer(db_session: AsyncSession, seed_user: User) -> Customer:
     customer = Customer(
         id=uuid.uuid4(),
         user_id=seed_user.id,
+        org_id=seed_user._org_id,  # type: ignore[attr-defined]
         name="Test Customer",
         phone="+919876543210",
         email="customer@example.com",

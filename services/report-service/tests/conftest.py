@@ -11,6 +11,7 @@ from models.base import Base
 from models.category import Category  # noqa: F401
 from models.customer import Customer  # noqa: F401
 from models.ledger_entry import LedgerEntry  # noqa: F401
+from models.org import Organisation, OrgMembership  # noqa: F401
 from models.transaction import Transaction  # noqa: F401
 from models.user import User
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -86,6 +87,28 @@ async def seed_user(db_session: AsyncSession) -> User:
     )
     db_session.add(user)
     await db_session.flush()
+
+    org = Organisation(
+        id=_uuid_mod.uuid4(),
+        name="Report User's Personal",
+        owner_id=user.id,
+        is_personal=True,
+        is_active=True,
+    )
+    db_session.add(org)
+    await db_session.flush()
+
+    membership = OrgMembership(
+        id=_uuid_mod.uuid4(),
+        org_id=org.id,
+        user_id=user.id,
+        role="owner",
+        is_active=True,
+    )
+    db_session.add(membership)
+    await db_session.flush()
+
+    user._org_id = org.id  # type: ignore[attr-defined]  # transient Python attr
     await db_session.refresh(user)
     return user
 
@@ -93,7 +116,10 @@ async def seed_user(db_session: AsyncSession) -> User:
 @pytest.fixture
 def auth_headers(seed_user: User) -> dict:
     token = make_access_token(str(seed_user.id))
-    return {"Authorization": f"Bearer {token}"}
+    return {
+        "Authorization": f"Bearer {token}",
+        "X-Org-ID": str(seed_user._org_id),  # type: ignore[attr-defined]
+    }
 
 
 @pytest.fixture
@@ -104,11 +130,21 @@ async def seed_full_data(db_session: AsyncSession):
         ALL_CATEGORIES,
         CUSTOMERS,
         LEDGER_ENTRIES,
+        ORG_ANITA_ID,
+        ORG_ARJUN_ID,
+        ORG_MEENA_ID,
+        ORG_MEMBER_IDS,
+        ORG_PRIYA_ID,
+        ORG_RAJESH_ID,
+        ORG_VIKRAM_ID,
         TRANSACTIONS,
+        USER_ORG_MAP,
         USERS,
     )
 
-    for u in USERS:
+    # Create personal orgs for each user
+    org_ids = [ORG_PRIYA_ID, ORG_RAJESH_ID, ORG_ANITA_ID, ORG_VIKRAM_ID, ORG_MEENA_ID, ORG_ARJUN_ID]
+    for u, org_id_str, member_id_str in zip(USERS, org_ids, ORG_MEMBER_IDS):
         db_session.add(
             User(
                 id=_id(u["id"]),
@@ -121,11 +157,34 @@ async def seed_full_data(db_session: AsyncSession):
         )
         await db_session.flush()
 
+        db_session.add(
+            Organisation(
+                id=_id(org_id_str),
+                name=f"{u['full_name']}'s Personal",
+                owner_id=_id(u["id"]),
+                is_personal=True,
+                is_active=True,
+            )
+        )
+        await db_session.flush()
+
+        db_session.add(
+            OrgMembership(
+                id=_id(member_id_str),
+                org_id=_id(org_id_str),
+                user_id=_id(u["id"]),
+                role="owner",
+                is_active=True,
+            )
+        )
+        await db_session.flush()
+
     for a in ACCOUNTS:
         db_session.add(
             Account(
                 id=_id(a["id"]),
                 user_id=_id(a["user_id"]),
+                org_id=_id(USER_ORG_MAP[a["user_id"]]),
                 name=a["name"],
                 type=a["type"],
                 currency=a["currency"],
@@ -153,6 +212,7 @@ async def seed_full_data(db_session: AsyncSession):
             Transaction(
                 id=_id(t["id"]),
                 user_id=_id(t["user_id"]),
+                org_id=_id(USER_ORG_MAP[t["user_id"]]),
                 account_id=_id(t["account_id"]),
                 category_id=_id(t["category_id"]),
                 type=t["type"],
@@ -168,6 +228,7 @@ async def seed_full_data(db_session: AsyncSession):
             Customer(
                 id=_id(c["id"]),
                 user_id=_id(c["user_id"]),
+                org_id=_id(USER_ORG_MAP[c["user_id"]]),
                 name=c["name"],
                 phone=c["phone"],
                 email=c["email"],
@@ -181,6 +242,7 @@ async def seed_full_data(db_session: AsyncSession):
             LedgerEntry(
                 id=_id(e["id"]),
                 user_id=_id(e["user_id"]),
+                org_id=_id(USER_ORG_MAP[e["user_id"]]),
                 customer_id=_id(e["customer_id"]),
                 type=e["type"],
                 amount=e["amount"],

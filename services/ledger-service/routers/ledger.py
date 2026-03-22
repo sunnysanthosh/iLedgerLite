@@ -2,11 +2,11 @@ import uuid
 
 from db import get_db
 from fastapi import APIRouter, Depends, Query
-from models.user import User
+from models.org import OrgMembership
 from schemas.ledger import LedgerEntryCreate, LedgerEntryResponse, LedgerEntryUpdate, LedgerSummary
 from services.customer_service import get_customer
 from services.ledger_service import create_ledger_entry, get_ledger_history, update_ledger_entry
-from services.security import get_current_user
+from services.security import get_org_member
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(tags=["ledger"])
@@ -15,10 +15,10 @@ router = APIRouter(tags=["ledger"])
 @router.post("/ledger-entry", response_model=LedgerEntryResponse, status_code=201)
 async def create_ledger_entry_endpoint(
     data: LedgerEntryCreate,
-    user: User = Depends(get_current_user),
+    membership: OrgMembership = Depends(get_org_member),
     db: AsyncSession = Depends(get_db),
 ):
-    return await create_ledger_entry(user.id, data, db)
+    return await create_ledger_entry(membership.user_id, membership.org_id, data, db)
 
 
 @router.get("/ledger/{customer_id}", response_model=LedgerSummary)
@@ -26,12 +26,12 @@ async def get_ledger_history_endpoint(
     customer_id: uuid.UUID,
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
-    user: User = Depends(get_current_user),
+    membership: OrgMembership = Depends(get_org_member),
     db: AsyncSession = Depends(get_db),
 ):
-    customer = await get_customer(customer_id, user.id, db)
+    customer = await get_customer(customer_id, membership.org_id, db)
     entries, total, total_debit, total_credit, outstanding = await get_ledger_history(
-        customer_id, user.id, db, skip=skip, limit=limit
+        customer_id, membership.org_id, db, skip=skip, limit=limit
     )
     return LedgerSummary(
         customer_id=customer.id,
@@ -50,7 +50,7 @@ async def get_ledger_history_endpoint(
 async def update_ledger_entry_endpoint(
     entry_id: uuid.UUID,
     data: LedgerEntryUpdate,
-    user: User = Depends(get_current_user),
+    membership: OrgMembership = Depends(get_org_member),
     db: AsyncSession = Depends(get_db),
 ):
-    return await update_ledger_entry(entry_id, user.id, data, db)
+    return await update_ledger_entry(entry_id, membership.org_id, data, db)

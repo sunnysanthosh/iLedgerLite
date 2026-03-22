@@ -17,9 +17,9 @@ async def _reload_transaction(txn_id: uuid.UUID, db: AsyncSession) -> Transactio
     return result.scalars().first()
 
 
-async def _verify_account_ownership(account_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSession) -> Account:
+async def _verify_account_ownership(account_id: uuid.UUID, org_id: uuid.UUID, db: AsyncSession) -> Account:
     result = await db.execute(
-        select(Account).where(Account.id == account_id, Account.user_id == user_id, Account.is_active.is_(True))
+        select(Account).where(Account.id == account_id, Account.org_id == org_id, Account.is_active.is_(True))
     )
     account = result.scalars().first()
     if account is None:
@@ -44,12 +44,15 @@ async def _update_account_balance(
     await db.flush()
 
 
-async def create_transaction(user_id: uuid.UUID, data: TransactionCreate, db: AsyncSession) -> Transaction:
-    account = await _verify_account_ownership(data.account_id, user_id, db)
+async def create_transaction(
+    user_id: uuid.UUID, org_id: uuid.UUID, data: TransactionCreate, db: AsyncSession
+) -> Transaction:
+    account = await _verify_account_ownership(data.account_id, org_id, db)
 
     txn = Transaction(
         id=uuid.uuid4(),
         user_id=user_id,
+        org_id=org_id,
         account_id=data.account_id,
         category_id=data.category_id,
         type=data.type,
@@ -64,7 +67,7 @@ async def create_transaction(user_id: uuid.UUID, data: TransactionCreate, db: As
 
 
 async def list_transactions(
-    user_id: uuid.UUID,
+    org_id: uuid.UUID,
     db: AsyncSession,
     account_id: uuid.UUID | None = None,
     category_id: uuid.UUID | None = None,
@@ -74,7 +77,7 @@ async def list_transactions(
     skip: int = 0,
     limit: int = 20,
 ) -> tuple[list[Transaction], int]:
-    base = select(Transaction).where(Transaction.user_id == user_id)
+    base = select(Transaction).where(Transaction.org_id == org_id)
 
     if account_id is not None:
         base = base.where(Transaction.account_id == account_id)
@@ -100,8 +103,8 @@ async def list_transactions(
     return items, total
 
 
-async def get_transaction(txn_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSession) -> Transaction:
-    result = await db.execute(select(Transaction).where(Transaction.id == txn_id, Transaction.user_id == user_id))
+async def get_transaction(txn_id: uuid.UUID, org_id: uuid.UUID, db: AsyncSession) -> Transaction:
+    result = await db.execute(select(Transaction).where(Transaction.id == txn_id, Transaction.org_id == org_id))
     txn = result.scalars().first()
     if txn is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
@@ -109,10 +112,10 @@ async def get_transaction(txn_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSessio
 
 
 async def update_transaction(
-    txn_id: uuid.UUID, user_id: uuid.UUID, data: TransactionUpdate, db: AsyncSession
+    txn_id: uuid.UUID, org_id: uuid.UUID, data: TransactionUpdate, db: AsyncSession
 ) -> Transaction:
-    txn = await get_transaction(txn_id, user_id, db)
-    account = await _verify_account_ownership(txn.account_id, user_id, db)
+    txn = await get_transaction(txn_id, org_id, db)
+    account = await _verify_account_ownership(txn.account_id, org_id, db)
 
     # Reverse old balance impact
     await _update_account_balance(account, txn.amount, txn.type, reverse=True, db=db)
@@ -134,9 +137,9 @@ async def update_transaction(
     return await _reload_transaction(txn.id, db)
 
 
-async def delete_transaction(txn_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSession) -> None:
-    txn = await get_transaction(txn_id, user_id, db)
-    account = await _verify_account_ownership(txn.account_id, user_id, db)
+async def delete_transaction(txn_id: uuid.UUID, org_id: uuid.UUID, db: AsyncSession) -> None:
+    txn = await get_transaction(txn_id, org_id, db)
+    account = await _verify_account_ownership(txn.account_id, org_id, db)
 
     # Reverse balance impact
     await _update_account_balance(account, txn.amount, txn.type, reverse=True, db=db)

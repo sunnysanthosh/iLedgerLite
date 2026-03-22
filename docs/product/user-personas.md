@@ -44,8 +44,9 @@ accounts. The most common LedgerLite user.
 | Other users' data | None |
 | Infra costs dashboard | None |
 
-**Future permissions (Sprint 14+):**
-- Create an organisation and invite staff (`org_owner` role)
+**Org permissions (Sprint 14 — live):**
+- Automatically gets a personal org on registration (`owner` role)
+- Can create additional organisations and invite staff (`owner` role)
 
 ---
 
@@ -68,8 +69,8 @@ family savings goals.
 - Less likely to use ledger (customer khata) feature
 - More likely to use budget alerts and reports
 
-**Future permissions:**
-- Shared household account (multi-user access to the same account set) — needs `org_member` role
+**Org permissions (Sprint 14 — live):**
+- Shared household account is now supported via org invitation (`member` role)
 
 ---
 
@@ -84,18 +85,15 @@ need to enter transactions (sales staff, cashiers).
 - Owner has full reporting visibility
 - Staff cannot see reports or delete records
 
-**Technical role (today):** `user` — multi-user orgs not yet implemented. Each user has
-a separate account. Shared access requires manual coordination.
-
-**Future technical roles:**
+**Technical roles (Sprint 14 — live):**
 
 | Team member | Role | What they can do |
 |---|---|---|
-| Business owner | `org_owner` | Full CRUD + reports + invite/remove members |
-| Cashier / sales staff | `org_member` | Create transactions, view own entries only |
-| Accountant (external) | `read_only` | View all transactions + reports — no writes |
+| Business owner | `owner` | Full CRUD + reports + invite/remove/role-change members |
+| Cashier / sales staff | `member` | Full CRUD on org data (cannot manage members) |
+| Accountant (external) | `read_only` | Read-only on all org data — no writes |
 
-**Implementation sprint:** Sprint 14+ (requires `organisations` + `org_memberships` DB tables)
+Active org selected via `X-Org-ID` HTTP header; falls back to personal org if absent.
 
 ---
 
@@ -109,12 +107,9 @@ reconcile accounts, and generate reports for tax filing.
 - Export CSV / PDF reports
 - No ability to create, modify, or delete records
 
-**Technical role (today):** Not supported. Accountant must use the owner's credentials —
-a security risk. This is a known gap.
+**Technical role (Sprint 14 — live):** `read_only` — invited to the business owner's org with `role = "read_only"` via `POST /organisations/{org_id}/members`.
 
-**Future technical role:** `read_only` (member of a `org_memberships` entry with `role = "read_only"`)
-
-**Future permissions:**
+**Permissions (read_only role):**
 
 | Feature | Access |
 |---|---|
@@ -169,7 +164,7 @@ user support, deployments, and security.
 
 ## Permission Matrix (Current)
 
-| Feature | Persona 1–2 (`user`) | Persona 3–4 (future org roles) | Persona 5 (`admin`) |
+| Feature | Persona 1–2 (`user`) | Persona 3–4 (org roles — Sprint 14) | Persona 5 (`admin`) |
 |---|---|---|---|
 | Register / login | ✅ | ✅ | ✅ |
 | Own accounts | ✅ CRUD | ✅ (scoped by role) | ✅ |
@@ -193,10 +188,11 @@ Sprint 13 (done)
   └── admin role: is_admin field + ADMIN_EMAILS env var
       Used for: /infra costs dashboard
 
-Sprint 14+ (planned)
-  └── org model: organisations + org_memberships tables
-      Roles: org_owner, org_member, read_only
+Sprint 14 (done — PR #18)
+  └── org model: organisations + org_memberships tables (migrations 004 + 005)
+      Roles: owner, member, read_only
       Used for: multi-user business accounts, accountant access
+      Transport: X-Org-ID header (fallback: personal org)
 
 Sprint 16+ (future)
   └── granular permissions: org-level feature flags

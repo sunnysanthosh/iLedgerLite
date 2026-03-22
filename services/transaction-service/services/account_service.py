@@ -13,10 +13,11 @@ async def _reload_account(account_id: uuid.UUID, db: AsyncSession) -> Account:
     return result.scalars().first()
 
 
-async def create_account(user_id: uuid.UUID, data: AccountCreate, db: AsyncSession) -> Account:
+async def create_account(user_id: uuid.UUID, org_id: uuid.UUID, data: AccountCreate, db: AsyncSession) -> Account:
     account = Account(
         id=uuid.uuid4(),
         user_id=user_id,
+        org_id=org_id,
         name=data.name,
         type=data.type,
         currency=data.currency,
@@ -27,25 +28,23 @@ async def create_account(user_id: uuid.UUID, data: AccountCreate, db: AsyncSessi
     return await _reload_account(account.id, db)
 
 
-async def list_accounts(user_id: uuid.UUID, db: AsyncSession) -> list[Account]:
+async def list_accounts(org_id: uuid.UUID, db: AsyncSession) -> list[Account]:
     result = await db.execute(
-        select(Account)
-        .where(Account.user_id == user_id, Account.is_active.is_(True))
-        .order_by(Account.created_at.desc())
+        select(Account).where(Account.org_id == org_id, Account.is_active.is_(True)).order_by(Account.created_at.desc())
     )
     return list(result.scalars().all())
 
 
-async def get_account(account_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSession) -> Account:
-    result = await db.execute(select(Account).where(Account.id == account_id, Account.user_id == user_id))
+async def get_account(account_id: uuid.UUID, org_id: uuid.UUID, db: AsyncSession) -> Account:
+    result = await db.execute(select(Account).where(Account.id == account_id, Account.org_id == org_id))
     account = result.scalars().first()
     if account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
     return account
 
 
-async def update_account(account_id: uuid.UUID, user_id: uuid.UUID, data: AccountUpdate, db: AsyncSession) -> Account:
-    account = await get_account(account_id, user_id, db)
+async def update_account(account_id: uuid.UUID, org_id: uuid.UUID, data: AccountUpdate, db: AsyncSession) -> Account:
+    account = await get_account(account_id, org_id, db)
 
     if data.name is not None:
         account.name = data.name
@@ -56,8 +55,8 @@ async def update_account(account_id: uuid.UUID, user_id: uuid.UUID, data: Accoun
     return await _reload_account(account.id, db)
 
 
-async def deactivate_account(account_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSession) -> Account:
-    account = await get_account(account_id, user_id, db)
+async def deactivate_account(account_id: uuid.UUID, org_id: uuid.UUID, db: AsyncSession) -> Account:
+    account = await get_account(account_id, org_id, db)
     account.is_active = False
     await db.flush()
     return await _reload_account(account.id, db)

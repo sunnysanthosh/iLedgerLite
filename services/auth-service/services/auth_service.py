@@ -4,6 +4,7 @@ from config import settings
 from db import get_db
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from models.org import Organisation, OrgMembership
 from models.user import User
 from redis.asyncio import Redis
 from schemas.auth import RegisterRequest, TokenResponse
@@ -28,14 +29,37 @@ async def register_user(data: RegisterRequest, db: AsyncSession) -> User:
     if result.scalars().first() is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
 
+    user_id = uuid.uuid4()
     user = User(
-        id=uuid.uuid4(),
+        id=user_id,
         email=data.email,
         password_hash=hash_password(data.password),
         full_name=data.full_name,
         phone=data.phone,
     )
     db.add(user)
+    await db.flush()
+
+    # Create personal org for the new user
+    org_id = uuid.uuid4()
+    org = Organisation(
+        id=org_id,
+        name=f"{data.full_name}'s Personal",
+        owner_id=user_id,
+        is_personal=True,
+        is_active=True,
+    )
+    db.add(org)
+    await db.flush()
+
+    membership = OrgMembership(
+        id=uuid.uuid4(),
+        org_id=org_id,
+        user_id=user_id,
+        role="owner",
+        is_active=True,
+    )
+    db.add(membership)
     await db.flush()
     await db.refresh(user)
     return user

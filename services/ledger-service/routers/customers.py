@@ -2,7 +2,7 @@ import uuid
 
 from db import get_db
 from fastapi import APIRouter, Depends, Query
-from models.user import User
+from models.org import OrgMembership
 from schemas.customer import (
     CustomerCreate,
     CustomerListResponse,
@@ -11,7 +11,7 @@ from schemas.customer import (
     CustomerWithBalance,
 )
 from services.customer_service import create_customer, get_customer, list_customers, update_customer
-from services.security import get_current_user
+from services.security import get_org_member
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(tags=["customers"])
@@ -20,10 +20,10 @@ router = APIRouter(tags=["customers"])
 @router.post("/customers", response_model=CustomerResponse, status_code=201)
 async def create_customer_endpoint(
     data: CustomerCreate,
-    user: User = Depends(get_current_user),
+    membership: OrgMembership = Depends(get_org_member),
     db: AsyncSession = Depends(get_db),
 ):
-    return await create_customer(user.id, data, db)
+    return await create_customer(membership.user_id, membership.org_id, data, db)
 
 
 @router.get("/customers", response_model=CustomerListResponse)
@@ -31,10 +31,10 @@ async def list_customers_endpoint(
     search: str | None = Query(None, description="Search by name, phone, or email"),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
-    user: User = Depends(get_current_user),
+    membership: OrgMembership = Depends(get_org_member),
     db: AsyncSession = Depends(get_db),
 ):
-    customers_with_balance, total = await list_customers(user.id, db, search=search, skip=skip, limit=limit)
+    customers_with_balance, total = await list_customers(membership.org_id, db, search=search, skip=skip, limit=limit)
     items = [
         CustomerWithBalance(
             id=c.id,
@@ -55,12 +55,12 @@ async def list_customers_endpoint(
 @router.get("/customers/{customer_id}", response_model=CustomerWithBalance)
 async def get_customer_endpoint(
     customer_id: uuid.UUID,
-    user: User = Depends(get_current_user),
+    membership: OrgMembership = Depends(get_org_member),
     db: AsyncSession = Depends(get_db),
 ):
     from services.customer_service import _calculate_outstanding_balance
 
-    customer = await get_customer(customer_id, user.id, db)
+    customer = await get_customer(customer_id, membership.org_id, db)
     balance = await _calculate_outstanding_balance(customer.id, db)
     return CustomerWithBalance(
         id=customer.id,
@@ -79,7 +79,7 @@ async def get_customer_endpoint(
 async def update_customer_endpoint(
     customer_id: uuid.UUID,
     data: CustomerUpdate,
-    user: User = Depends(get_current_user),
+    membership: OrgMembership = Depends(get_org_member),
     db: AsyncSession = Depends(get_db),
 ):
-    return await update_customer(customer_id, user.id, data, db)
+    return await update_customer(customer_id, membership.org_id, data, db)
