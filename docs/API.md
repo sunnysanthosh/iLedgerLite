@@ -142,9 +142,19 @@ Retrieve the currently authenticated user's profile.
   "phone": "+919876543210",
   "is_active": true,
   "created_at": "2026-01-15T10:30:00Z",
-  "updated_at": "2026-01-15T10:30:00Z"
+  "updated_at": "2026-01-15T10:30:00Z",
+  "organisations": [
+    {
+      "id": "uuid",
+      "name": "Jane's Personal",
+      "role": "owner",
+      "is_personal": true
+    }
+  ]
 }
 ```
+
+The `organisations` array lists every org the user is an active member of, with their role in each. Solo users have exactly one entry (their personal org). Use the `id` as the `X-Org-ID` header value when making requests to data services.
 
 ---
 
@@ -315,6 +325,124 @@ Health check endpoint. No authentication required.
   "service": "user"
 }
 ```
+
+---
+
+### Organisation Endpoints (Sprint 14)
+
+All org endpoints require `Authorization: Bearer <access_token>`.
+
+#### POST /organisations
+
+Create a new organisation. The calling user automatically becomes the owner and first member.
+
+**Request Body:**
+
+```json
+{ "name": "Acme Trading Co." }
+```
+
+**Response:** `201 Created`
+
+```json
+{
+  "id": "uuid",
+  "name": "Acme Trading Co.",
+  "is_personal": false,
+  "is_active": true,
+  "members": [
+    { "user_id": "uuid", "email": "owner@example.com", "full_name": "Jane Doe", "role": "owner", "is_active": true }
+  ]
+}
+```
+
+---
+
+#### GET /organisations
+
+List all organisations the current user is a member of.
+
+**Response:** `200 OK` — array of `{ id, name, is_personal, is_active, member_count }`
+
+---
+
+#### GET /organisations/{org_id}
+
+Get org detail including full member list. Requires membership.
+
+**Response:** `200 OK` — same as POST response shape.
+
+**Error:** `403 Forbidden` if not a member.
+
+---
+
+#### POST /organisations/{org_id}/members
+
+Invite a user by email to the org. Requires `owner` or `member` role.
+
+**Request Body:**
+
+```json
+{ "email": "accountant@example.com", "role": "member" }
+```
+
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| email | string | Yes | Must match an existing LedgerLite account |
+| role | string | Yes | One of: `member`, `read_only` |
+
+**Response:** `201 Created` — `MemberResponse`
+
+**Error:** `404 Not Found` if email doesn't exist. `409 Conflict` if already a member.
+
+---
+
+#### GET /organisations/{org_id}/members
+
+List all members of the org. Requires membership.
+
+**Response:** `200 OK` — array of `MemberResponse`
+
+---
+
+#### PATCH /organisations/{org_id}/members/{user_id}
+
+Change a member's role. Requires `owner` role.
+
+**Request Body:**
+
+```json
+{ "role": "read_only" }
+```
+
+**Response:** `200 OK` — updated `MemberResponse`
+
+**Error:** `403 Forbidden` if not owner.
+
+---
+
+#### DELETE /organisations/{org_id}/members/{user_id}
+
+Remove a member from the org. Requires `owner` role. Cannot remove the last owner.
+
+**Response:** `204 No Content`
+
+**Error:** `400 Bad Request` if attempting to remove the last owner.
+
+---
+
+### X-Org-ID Header
+
+All data service endpoints (transaction, ledger, report) accept an optional `X-Org-ID` request header:
+
+```
+X-Org-ID: <org_uuid>
+```
+
+- **If provided:** the request is scoped to that organisation; returns `403` if the authenticated user is not an active member.
+- **If absent:** falls back to the user's personal organisation automatically.
+
+This ensures backward compatibility: clients that don't send `X-Org-ID` continue working unchanged, operating against their personal org.
 
 ---
 

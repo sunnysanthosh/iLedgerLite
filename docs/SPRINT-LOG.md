@@ -520,3 +520,181 @@ alembic history
 - PostgreSQL StatefulSet included for dev/staging self-containment; production can swap to managed RDS/CloudSQL
 - Migrations run as a standalone Job (manual apply before deployments), not auto-run on every `kubectl apply`
 - Secrets use `stringData` (not base64) for readability; production should use sealed-secrets or external-secrets-operator
+
+---
+
+## Sprint 9 — Next.js Web Dashboard (Completed — `sprint-9-done`)
+
+**Goal:** Scaffold and ship a Next.js 14 web dashboard with TypeScript, 6 functional tabs, and auth integration.
+
+**Delivered:**
+- Next.js 14 app in `apps/web-dashboard/` with App Router
+- 6 tabs: Dashboard, Transactions, Accounts, Ledger, Reports, Settings
+- Auth: JWT-based login flow integrated with auth-service
+- Recharts for reports visualisation
+- `lib/config.ts` + `.env.local.example` for service URL configuration
+- TypeScript throughout; Tailwind CSS for UI
+
+---
+
+## Sprint 10 — GCP Staging Deploy (Completed — `sprint-10-done`)
+
+**Goal:** Deploy all 8 microservices to a live GCP staging environment (GKE + Cloud SQL + Redis).
+
+**Delivered:**
+- GKE Standard cluster `ledgerlite-staging` in `us-central1` (3 preemptible e2-medium nodes)
+- Cloud SQL Postgres 16 instance `ledgerlite-staging-pg` at private IP `10.82.0.3`
+- Redis 7 in-cluster (Memorystore path deferred; in-cluster Redis for staging)
+- All 8 services deployed in namespace `ledgerlite-staging` and verified Running
+- Alembic migrations ran successfully — schema + seed categories applied
+- GHCR image registry at `ghcr.io/sunnysanthosh/ledgerlite/<service>:latest`
+- Terraform IaC for GCP (`infrastructure/terraform/`) — 6 modules: vpc, gke, cloudsql, memorystore, storage, iam
+
+**Key decisions:**
+- GKE Standard (not Autopilot) for cost predictability
+- Preemptible nodes for staging cost savings (~$30/mo vs $90/mo)
+- Private VPC — Cloud SQL accessible only within cluster
+
+---
+
+## Sprint 11 — Production Readiness: HA + TLS + CI Hardening (Completed — `sprint-11-done`)
+
+**Goal:** Make staging production-grade — HTTPS, auto-scaling, verified deploys, security scanning on every build.
+
+**Delivered:**
+- `deploy.yml`: KUBECONFIG/DB_PASSWORD/JWT_SECRET env secrets; smoke tests; auto-rollback; removed `--record`
+- `build.yml`: Trivy CRITICAL/HIGH scan after every image build
+- `test.yml`: pytest-cov XML artifact (14-day retention)
+- `lint.yml`: terraform-lint job (`fmt` + `validate`)
+- `base/resource-quota.yaml`: pods:40, cpu:4, mem:4Gi
+- `base/pdb.yaml`: PodDisruptionBudget minAvailable:1 for all 8 services
+- `base/hpa.yaml`: autoscaling/v2 CPU-50%, min:1 max:4 (staging), min:2 max:6 (production)
+- `base/kustomization.yaml`: commonLabels → labels (kustomize v5)
+- `cert-manager/`: ClusterIssuer manifests for Let's Encrypt staging + production
+- `overlays/staging`: TLS via letsencrypt-staging + ssl-redirect
+- `overlays/production`: TLS via letsencrypt-prod, HPA min:2 max:6 patch
+- `docs/operations/github-secrets-setup.md`: one-time setup guide
+
+---
+
+## Sprint 12 — Data Reliability + App Correctness + Cost Visibility (Completed — `sprint-12-done`)
+
+**Goal:** GCP Budget Alerts live, staging auto-stops nightly, no Redis data loss on restart, correct DB query performance, app works end-to-end in staging, rate limiting active.
+
+**Delivered:**
+- **TD-33**: On-demand staging start/stop (nightly 22:00 UTC cron), CI SA in Terraform IAM
+- **TD-15**: Migration 002 idempotent (WHERE NOT EXISTS replaces bulk_insert)
+- **TD-16**: Migration 003 — 4 missing FK indexes (categories, transactions.category_id partial, customers, receipts)
+- **TD-20**: Migration 001 downgrade() — drops all 10 tables in reverse order
+- **TD-14**: CORSMiddleware on all 8 services (ALLOWED_ORIGINS env-overridable)
+- **TD-19**: slowapi rate limiting 100 req/min per IP on all 8 services
+- **TD-23**: logger.exception() in db/session.py except block on all 8 services
+- **TD-17**: Redis StatefulSet + 1Gi PVC + headless Service (AOF + RDB persistence)
+- **TD-11**: Flutter AppConfig + standardised env vars (AUTH_URL…SYNC_URL, --dart-define)
+- **TD-12**: Next.js lib/config.ts + .env.local.example + sync service added
+- **FT-02**: cost-snapshot.yml CI job — captures GKE/SQL state on sprint-*-done tag push
+- **TD-32**: docs/operations/budget-alerts-setup.md — gcloud CLI + console steps
+
+---
+
+## Sprint 13 — Security Hardening + Observability + Admin Cost Dashboard + RBAC (Completed — `sprint-13-rbac-baseline`)
+
+**Goal:** Admin cost dashboard live, zero implicit pod-to-pod access, full request tracing, hardened mobile client, documented RBAC model.
+
+**Delivered:**
+- **TD-28**: Slack CI failure alerts on test.yml + lint.yml + build.yml
+- **FT-01**: Admin cost dashboard — Next.js `/infra` page with budget bars, trend chart, resource table
+- **TD-22**: Docker base image digest pinning — all 9 Dockerfiles `FROM python:3.12-slim@sha256:...`
+- **TD-10**: Kubernetes NetworkPolicies — 7 policies (default-deny + service-specific allow rules)
+- **TD-21**: Structured JSON logging + X-Trace-ID middleware on all 8 services
+- **TD-25**: 60% coverage gate — `--cov-fail-under=60` in test.yml; all services at 84–91%
+- **TD-26**: Flutter cert pinning — ISRG Root X1 CA, opt-in via `--dart-define=CERT_PIN_ENABLED=true`
+- **PR #14**: Admin RBAC — `adminOnly` sidebar flag + `isAdmin()` client helper + page redirect guard
+- **PR #15**: Server-side auth on `/api/infra/costs` — `resolveAdminStatus()` fails closed; `ADMIN_EMAILS` server-only
+- **PR #16**: git-ignored admin runbooks + `docs/admin/README.md` placeholder committed
+- **PR #17**: RBAC docs — `docs/developer/rbac-guide.md`, `docs/product/user-personas.md`, Architecture §7, CLAUDE.md RBAC conventions
+
+**Tests:** 146 tests across 8 services, all green. Coverage gate 60% min enforced in CI.
+
+---
+
+## Sprint 14 — Multi-User Organisations — Backend (Completed — `sprint-14-done`)
+
+**Goal:** Introduce an organisation layer so multiple users can share a set of financial records (e.g., a business owner and their accountant). Unified model: every user — even solo users — gets a personal org automatically, keeping the query model consistent.
+
+**Delivered:**
+
+### Database (2 new Alembic migrations)
+
+**Migration 004 — `004_organisations.py`**
+- New tables: `organisations` (id, name, owner_id, is_personal, is_active) and `org_memberships` (id, org_id, user_id, role, is_active, invited_by)
+- Role constraint: `CHECK (role IN ('owner','member','read_only'))`
+- Unique constraint: `(org_id, user_id)` — one membership row per user per org
+- Added nullable `org_id` column to six existing tables: `accounts`, `transactions`, `categories`, `customers`, `ledger_entries`, `notifications`
+- Indexes on all `org_id` columns and membership lookups
+
+**Migration 005 — `005_personal_orgs_data_migration.py`**
+- Pure data migration: creates one personal org per existing user, inserts owner membership, backfills `org_id` on all six data tables using the user's personal org
+
+### Auth Service
+- New read-only `Organisation` + `OrgMembership` ORM models (`models/org.py`)
+- Extended `UserProfile` schema with `organisations: list[OrgRef]`
+- `GET /auth/me` now eager-loads memberships via `selectinload` and returns the user's org list
+
+### User Service — Full Org CRUD (7 new endpoints)
+- `get_org_member` FastAPI dependency in `services/security.py`: reads `X-Org-ID` header, verifies org membership, falls back to personal org when header absent; raises 403 if not a member
+- `POST /organisations` — create new org (creator becomes owner)
+- `GET /organisations` — list user's orgs (from `org_memberships`)
+- `GET /organisations/{org_id}` — get org detail with member list
+- `POST /organisations/{org_id}/members` — invite user by email (owner/member only)
+- `GET /organisations/{org_id}/members` — list members
+- `PATCH /organisations/{org_id}/members/{user_id}` — change role (owner only)
+- `DELETE /organisations/{org_id}/members/{user_id}` — remove member (owner only; cannot remove last owner)
+
+### Transaction, Ledger, Report Services — Org-Scoped Data
+- Read-only `Organisation` + `OrgMembership` ORM models added to each service
+- `org_id` column added to `Account`, `Transaction`, `Customer`, `LedgerEntry` models (nullable, no FK constraint for SQLite test compatibility)
+- All queries converted from `user_id` scope → `org_id` scope
+- All create operations write both `user_id` (audit) and `org_id` (scope)
+- `get_org_member` dependency wired into all route handlers; `membership.org_id` passed to service functions
+
+### Shared Test Data (`shared/test_data.py`)
+- Deterministic org UUIDs: `ORG_PRIYA_ID`…`ORG_ARJUN_ID` (`00000000-0000-4000-0100-00000000000X`)
+- `USER_ORG_MAP` dict: maps each test user's ID to their personal org ID
+- `make_auth_headers()` extended with optional `org_id` parameter → adds `X-Org-ID` header
+- All per-user header factories (`priya_headers()`, `rajesh_headers()`, etc.) now include `X-Org-ID`
+
+### Test Fixtures Updated (transaction, ledger, report services)
+- `seed_user` creates personal org + owner membership; attaches `user._org_id` transient attr
+- `auth_headers` includes `{"Authorization": "Bearer …", "X-Org-ID": "…"}`
+- `seed_account` / `seed_customer` set `org_id` from `seed_user._org_id`
+- `seed_full_data` (report-service) creates orgs + memberships for all 6 test users, seeds `org_id` on all data rows
+
+**Endpoints added:**
+
+| Service | Method | Path | Status | Description |
+|---------|--------|------|--------|-------------|
+| user-service | POST | /organisations | 201 | Create org |
+| user-service | GET | /organisations | 200 | List user's orgs |
+| user-service | GET | /organisations/{org_id} | 200 | Get org detail |
+| user-service | POST | /organisations/{org_id}/members | 201 | Invite member by email |
+| user-service | GET | /organisations/{org_id}/members | 200 | List members |
+| user-service | PATCH | /organisations/{org_id}/members/{uid} | 200 | Change member role |
+| user-service | DELETE | /organisations/{org_id}/members/{uid} | 204 | Remove member |
+| auth-service | GET | /auth/me | 200 | Now returns `organisations` list |
+
+**Tests:** 158 passing across all 8 services (30 user-service, 27 transaction, 26 ledger, 18 report, 15 auth, 16 ai, 14 sync, 12 notification)
+
+**Key Technical Decisions:**
+- **Unified model:** every user automatically gets a personal org — solo users are unaffected; no migration path needed for existing data
+- **`X-Org-ID` header transport:** clients specify the active org context; absent header falls back to personal org transparently
+- **`user_id` preserved on all tables** for audit; `org_id` is the query scope — both columns exist side-by-side
+- **`org_id` nullable with no FK constraint in ORM:** uses plain `Uuid` (cross-dialect) not `postgresql.UUID` — FK constraints are enforced at DB level only, keeping SQLite test backend working without FK enforcement
+- **`populate_existing=True`** on all `get_org_member` queries to bust the SQLAlchemy identity map cache after membership lookups
+- **`user._org_id` transient attribute pattern:** attaches Python-level attribute (not a DB column) to the `seed_user` fixture return value so `auth_headers` can read the org ID without an extra DB query
+
+**Deferred to Sprint 15:**
+- Web dashboard: `OrgRef` types, Zustand `currentOrgId` store, `OrgSwitcher` component, `X-Org-ID` in API client, `/settings/org` page
+- Flutter mobile: `AuthState.organisations`, `TokenStorage.getCurrentOrgId()`, `AuthInterceptor` header injection, `/org-selection` route + screen
+- Org scoping for ai-service, notification-service, sync-service
+- `org_id NOT NULL` constraint (after all services verified in production)
