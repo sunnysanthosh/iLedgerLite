@@ -3,7 +3,7 @@ import 'package:dio/dio.dart';
 import '../storage/token_storage.dart';
 import 'api_constants.dart';
 
-/// Attaches the access token to outgoing requests and handles
+/// Attaches the access token + active org ID to outgoing requests and handles
 /// automatic token refresh on 401 responses.
 class AuthInterceptor extends Interceptor {
   AuthInterceptor({
@@ -31,6 +31,13 @@ class AuthInterceptor extends Interceptor {
     if (token != null) {
       options.headers['Authorization'] = 'Bearer $token';
     }
+
+    // Inject active org header for all authenticated requests
+    final orgId = await _tokenStorage.getCurrentOrgId();
+    if (orgId != null) {
+      options.headers['X-Org-ID'] = orgId;
+    }
+
     handler.next(options);
   }
 

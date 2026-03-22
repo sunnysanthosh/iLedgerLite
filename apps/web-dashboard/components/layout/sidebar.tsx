@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { isAdmin } from "@/lib/auth/is-admin"
 import { useAuthStore } from "@/lib/store/auth-store"
+import { OrgSwitcher } from "@/components/layout/org-switcher"
 
 const NAV = [
   { href: "/dashboard",    label: "Dashboard",     icon: "▦",  adminOnly: false },
@@ -30,6 +31,9 @@ export function Sidebar() {
         <p className="text-lg font-bold text-brand-700">LedgerLite</p>
         <p className="text-xs text-gray-400 mt-0.5">Web Dashboard</p>
       </div>
+
+      {/* Org switcher — only rendered if user has >1 org */}
+      <OrgSwitcher />
 
       {/* Nav */}
       <nav className="flex-1 py-4 space-y-1 px-3">

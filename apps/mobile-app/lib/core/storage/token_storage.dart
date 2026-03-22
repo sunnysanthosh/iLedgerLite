@@ -8,6 +8,7 @@ final tokenStorageProvider = Provider<TokenStorage>((ref) {
 class TokenStorage {
   static const _accessTokenKey = 'access_token';
   static const _refreshTokenKey = 'refresh_token';
+  static const _currentOrgIdKey = 'current_org_id';
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
@@ -36,4 +37,13 @@ class TokenStorage {
     final token = await getAccessToken();
     return token != null;
   }
+
+  Future<void> saveCurrentOrgId(String orgId) =>
+      _storage.write(key: _currentOrgIdKey, value: orgId);
+
+  Future<String?> getCurrentOrgId() =>
+      _storage.read(key: _currentOrgIdKey);
+
+  Future<void> clearOrgId() =>
+      _storage.delete(key: _currentOrgIdKey);
 }

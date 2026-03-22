@@ -16,6 +16,7 @@ import '../../features/ledger/screens/add_customer_screen.dart';
 import '../../features/ledger/screens/add_ledger_entry_screen.dart';
 import '../../features/reports/screens/reports_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
+import '../../features/orgs/screens/org_selection_screen.dart';
 import 'shell_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -24,12 +25,28 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/dashboard',
     redirect: (context, state) {
-      final isLoggedIn = authState.valueOrNull?.isLoggedIn ?? false;
+      final auth = authState.valueOrNull;
+      final isLoggedIn = auth?.isLoggedIn ?? false;
       final isAuthRoute = state.matchedLocation == '/login' ||
           state.matchedLocation == '/register';
+      final isOrgSelection = state.matchedLocation == '/org-selection';
 
       if (!isLoggedIn && !isAuthRoute) return '/login';
-      if (isLoggedIn && isAuthRoute) return '/dashboard';
+      if (isLoggedIn && isAuthRoute) {
+        // If user has multiple orgs and hasn't picked one yet, go to org selection
+        final orgs = auth?.organisations ?? [];
+        if (orgs.length > 1 && auth?.currentOrgId == null) {
+          return '/org-selection';
+        }
+        return '/dashboard';
+      }
+      // After login: redirect to org selection if multi-org and no selection yet
+      if (isLoggedIn && !isAuthRoute && !isOrgSelection) {
+        final orgs = auth?.organisations ?? [];
+        if (orgs.length > 1 && auth?.currentOrgId == null) {
+          return '/org-selection';
+        }
+      }
       return null;
     },
     routes: [
@@ -40,6 +57,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: '/org-selection',
+        builder: (context, state) => const OrgSelectionScreen(),
       ),
       ShellRoute(
         builder: (context, state, child) => ShellScreen(child: child),
