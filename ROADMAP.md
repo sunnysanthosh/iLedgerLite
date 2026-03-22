@@ -5,7 +5,7 @@
 
 ---
 
-## Current State — Sprint 14 Done ✅ (tagged `sprint-14-done`)
+## Current State — Sprint 15 Done ✅ (tagged `sprint-15-done`)
 
 | Component | Status | Details |
 |---|---|---|
@@ -14,19 +14,19 @@
 | **transaction-service** | ✅ Done | 12 endpoints, 27 tests; org_id scoped |
 | **ledger-service** | ✅ Done | 7 endpoints, 26 tests; org_id scoped |
 | **report-service** | ✅ Done | 5 endpoints, 18 tests; org_id scoped |
-| **notification-service** | ✅ Done | 3 endpoints, 12 tests |
-| **ai-service** | ✅ Done | 3 endpoints, 16 tests |
-| **sync-service** | ✅ Done | 3 endpoints, 14 tests |
+| **notification-service** | ✅ Done | 3 endpoints, 12 tests; org_id scoped |
+| **ai-service** | ✅ Done | 3 endpoints, 16 tests; org_id scoped |
+| **sync-service** | ✅ Done | 3 endpoints, 14 tests; org_id scoped |
 | **database** | ✅ Done | schema.sql, 5 Alembic migrations, 29 seed categories, organisations + org_memberships tables |
 | **CI/CD** | ✅ Done | test + lint + build (GHCR + Trivy) + deploy (smoke + rollback) + terraform-lint + 60% coverage gate + Slack alerts |
-| **apps/mobile-app** | ✅ Done | Flutter — 6 screens, 43 Dart files, offline sync, cert pinning |
-| **apps/web-dashboard** | ✅ Done | Next.js 14 — 6 tabs + admin infra tab, TypeScript, Recharts |
+| **apps/mobile-app** | ✅ Done | Flutter — 6 screens, 43 Dart files, offline sync, cert pinning, org selection + X-Org-ID |
+| **apps/web-dashboard** | ✅ Done | Next.js 14 — 6 tabs + admin infra + org settings tab; OrgSwitcher; X-Org-ID header |
 | **infrastructure/kubernetes** | ✅ Done | Kustomize base + staging/production overlays; PDB, HPA, ResourceQuota, TLS, NetworkPolicies |
 | **infrastructure/terraform** | ✅ Done | 6 GCP modules (VPC, GKE, CloudSQL, Memorystore, Storage, IAM) |
 | **GCP staging** | ✅ Live | All 8 services running in `ledgerlite-staging`, 5 migrations applied |
-| **multi-user orgs** | ✅ Done | Backend complete (organisations + org_memberships, `get_org_member`, org CRUD, org_id scoping all data services); web/mobile UI → Sprint 15 |
+| **multi-user orgs** | ✅ Done | Full stack: backend org CRUD + org_id scoping (all 8 services) + web OrgSwitcher + Flutter OrgSelectionScreen |
 
-**158 tests passing. GCP staging live. main at `sprint-14-done` (`abf6392`).**
+**158 tests passing. GCP staging live. main at `sprint-14-done` (`abf6392`). PR #22 pending merge.**
 
 ---
 
