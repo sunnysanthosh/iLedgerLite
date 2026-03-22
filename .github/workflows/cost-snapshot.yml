@@ -18,7 +18,9 @@ jobs:
   snapshot:
     name: Capture GCP cost snapshot
     runs-on: ubuntu-latest
-    environment: staging
+    # No environment: staging — uses repo-level GCP_SA_KEY secret.
+    # If GCP_SA_KEY is not configured, GCP steps are skipped and the
+    # snapshot row is still committed with "no-gcp-creds" in each field.
 
     steps:
       - name: Checkout
@@ -28,51 +30,51 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Authenticate to GCP
+        id: gcp_auth
+        continue-on-error: true
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Set up gcloud
+        if: steps.gcp_auth.outcome == 'success'
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.PROJECT_ID }}
 
-      - name: Capture cost snapshot
+      - name: Capture GCP resource state
         id: costs
         run: |
           SPRINT_TAG="${{ github.ref_name }}"
-          if [ "$SPRINT_TAG" = "" ] || [ "$SPRINT_TAG" = "refs/heads/main" ]; then
+          # Normalise tag: strip refs/tags/ prefix if present
+          SPRINT_TAG="${SPRINT_TAG#refs/tags/}"
+          # If not a sprint tag (e.g. triggered by branch push), use input
+          if [[ "$SPRINT_TAG" != sprint-*-done ]]; then
             SPRINT_TAG="${{ inputs.sprint_tag }}"
           fi
           SNAPSHOT_DATE=$(date -u +"%Y-%m-%d")
+          echo "sprint_tag=$SPRINT_TAG"   >> "$GITHUB_OUTPUT"
+          echo "snapshot_date=$SNAPSHOT_DATE" >> "$GITHUB_OUTPUT"
 
-          # Query billing for current month spend by SKU family
-          # gcloud billing projects describe gives billing account; use gcloud for cost data
-          BILLING_ACCOUNT=$(gcloud billing projects describe "${{ env.PROJECT_ID }}" \
-            --format="value(billingAccountName)" | sed 's|billingAccounts/||')
+          if [ "${{ steps.gcp_auth.outcome }}" = "success" ]; then
+            GKE_NODES=$(gcloud container clusters describe ledgerlite-staging \
+              --region us-central1 \
+              --format="value(currentNodeCount)" 2>/dev/null || echo "err")
+            SQL_TIER=$(gcloud sql instances describe ledgerlite-staging-pg \
+              --format="value(settings.tier)" 2>/dev/null || echo "err")
+            SQL_STATE=$(gcloud sql instances describe ledgerlite-staging-pg \
+              --format="value(state)" 2>/dev/null || echo "err")
+          else
+            echo "⚠️  GCP_SA_KEY not configured — skipping GCP queries."
+            echo "    Add GCP_SA_KEY as a repo secret to enable auto-capture."
+            GKE_NODES="no-gcp-creds"
+            SQL_TIER="no-gcp-creds"
+            SQL_STATE="no-gcp-creds"
+          fi
 
-          # Export current month costs by service using gcloud billing
-          MONTH=$(date -u +"%Y-%m")
-          RAW=$(gcloud billing accounts get-iam-policy "$BILLING_ACCOUNT" \
-            --format=json 2>/dev/null || echo "{}")
-
-          # Use resource manager to get cost data (approximate via describe)
-          # Since direct billing API requires OAuth2, use gcloud sql + container for actuals
-          GKE_NODES=$(gcloud container clusters describe ledgerlite-staging \
-            --region us-central1 \
-            --format="value(currentNodeCount)" 2>/dev/null || echo "0")
-
-          SQL_TIER=$(gcloud sql instances describe ledgerlite-staging-pg \
-            --format="value(settings.tier)" 2>/dev/null || echo "unknown")
-
-          SQL_STATE=$(gcloud sql instances describe ledgerlite-staging-pg \
-            --format="value(state)" 2>/dev/null || echo "unknown")
-
-          echo "sprint_tag=$SPRINT_TAG" >> $GITHUB_OUTPUT
-          echo "snapshot_date=$SNAPSHOT_DATE" >> $GITHUB_OUTPUT
-          echo "gke_nodes=$GKE_NODES" >> $GITHUB_OUTPUT
-          echo "sql_tier=$SQL_TIER" >> $GITHUB_OUTPUT
-          echo "sql_state=$SQL_STATE" >> $GITHUB_OUTPUT
+          echo "gke_nodes=$GKE_NODES"   >> "$GITHUB_OUTPUT"
+          echo "sql_tier=$SQL_TIER"     >> "$GITHUB_OUTPUT"
+          echo "sql_state=$SQL_STATE"   >> "$GITHUB_OUTPUT"
 
       - name: Append snapshot to cost-snapshots.md
         run: |
@@ -82,20 +84,12 @@ jobs:
           SQL_TIER="${{ steps.costs.outputs.sql_tier }}"
           SQL_STATE="${{ steps.costs.outputs.sql_state }}"
 
-          # Ensure the file and header exist
-          if [ ! -f docs/operations/cost-snapshots.md ]; then
-            cat > docs/operations/cost-snapshots.md << 'HEADER'
-# Sprint Cost Snapshots
-
-> Auto-generated at each sprint tag by the `cost-snapshot.yml` workflow.
-> Review after each sprint to track infrastructure spend trends.
-
-| Date | Sprint Tag | GKE Nodes | SQL Tier | SQL State | Notes |
-|---|---|---|---|---|---|
-HEADER
+          # Idempotency: skip if this sprint tag row already exists
+          if grep -qF "| ${SPRINT_TAG} |" docs/operations/cost-snapshots.md 2>/dev/null; then
+            echo "Row for ${SPRINT_TAG} already exists — skipping duplicate."
+            exit 0
           fi
 
-          # Append the new row
           echo "| ${DATE} | ${SPRINT_TAG} | ${GKE_NODES} | ${SQL_TIER} | ${SQL_STATE} | auto-captured |" \
             >> docs/operations/cost-snapshots.md
 
