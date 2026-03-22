@@ -112,7 +112,13 @@ async def test_me_valid_token(client: AsyncClient):
 
     resp = await client.get(ME_URL, headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 200
-    assert resp.json()["email"] == "me@example.com"
+    body = resp.json()
+    assert body["email"] == "me@example.com"
+    # Personal org is created on registration and appears in /me response
+    assert isinstance(body["organisations"], list)
+    assert len(body["organisations"]) == 1
+    assert body["organisations"][0]["role"] == "owner"
+    assert body["organisations"][0]["is_personal"] is True
 
 
 @pytest.mark.asyncio

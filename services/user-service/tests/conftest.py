@@ -65,7 +65,9 @@ def make_access_token(user_id: str) -> str:
 
 @pytest.fixture
 async def seed_user(db_session: AsyncSession) -> User:
-    """Create a test user in the database and return it."""
+    """Create a test user + personal org in the database and return the user."""
+    from models.org import Organisation, OrgMembership
+
     user = User(
         id=uuid.uuid4(),
         email="testuser@example.com",
@@ -75,6 +77,26 @@ async def seed_user(db_session: AsyncSession) -> User:
         is_active=True,
     )
     db_session.add(user)
+    await db_session.flush()
+
+    org = Organisation(
+        id=uuid.uuid4(),
+        name="Test User's Personal",
+        owner_id=user.id,
+        is_personal=True,
+        is_active=True,
+    )
+    db_session.add(org)
+    await db_session.flush()
+
+    membership = OrgMembership(
+        id=uuid.uuid4(),
+        org_id=org.id,
+        user_id=user.id,
+        role="owner",
+        is_active=True,
+    )
+    db_session.add(membership)
     await db_session.flush()
     await db_session.refresh(user)
     return user

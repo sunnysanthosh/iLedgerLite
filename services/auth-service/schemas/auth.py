@@ -33,6 +33,13 @@ class RefreshRequest(BaseModel):
     refresh_token: str
 
 
+class OrgRef(BaseModel):
+    id: str
+    name: str
+    role: str
+    is_personal: bool
+
+
 class UserProfile(BaseModel):
     id: uuid.UUID
     email: str
@@ -41,5 +48,6 @@ class UserProfile(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+    organisations: list[OrgRef] = []
 
     model_config = {"from_attributes": True}

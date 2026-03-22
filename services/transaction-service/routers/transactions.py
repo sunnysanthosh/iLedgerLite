@@ -3,14 +3,14 @@ from datetime import datetime
 
 from db import get_db
 from fastapi import APIRouter, Depends, Query, status
-from models.user import User
+from models.org import OrgMembership
 from schemas.transaction import (
     TransactionCreate,
     TransactionListResponse,
     TransactionResponse,
     TransactionUpdate,
 )
-from services.security import get_current_user
+from services.security import get_org_member
 from services.transaction_service import (
     create_transaction,
     delete_transaction,
@@ -26,10 +26,10 @@ router = APIRouter(prefix="/transactions", tags=["transactions"])
 @router.post("", response_model=TransactionResponse, status_code=status.HTTP_201_CREATED)
 async def create(
     data: TransactionCreate,
-    current_user: User = Depends(get_current_user),
+    membership: OrgMembership = Depends(get_org_member),
     db: AsyncSession = Depends(get_db),
 ):
-    return await create_transaction(current_user.id, data, db)
+    return await create_transaction(membership.user_id, membership.org_id, data, db)
 
 
 @router.get("", response_model=TransactionListResponse)
@@ -41,11 +41,11 @@ async def list_all(
     date_to: datetime | None = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
-    current_user: User = Depends(get_current_user),
+    membership: OrgMembership = Depends(get_org_member),
     db: AsyncSession = Depends(get_db),
 ):
     items, total = await list_transactions(
-        current_user.id,
+        membership.org_id,
         db,
         account_id=account_id,
         category_id=category_id,
@@ -61,27 +61,27 @@ async def list_all(
 @router.get("/{transaction_id}", response_model=TransactionResponse)
 async def get_one(
     transaction_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
+    membership: OrgMembership = Depends(get_org_member),
     db: AsyncSession = Depends(get_db),
 ):
-    return await get_transaction(transaction_id, current_user.id, db)
+    return await get_transaction(transaction_id, membership.org_id, db)
 
 
 @router.put("/{transaction_id}", response_model=TransactionResponse)
 async def update(
     transaction_id: uuid.UUID,
     data: TransactionUpdate,
-    current_user: User = Depends(get_current_user),
+    membership: OrgMembership = Depends(get_org_member),
     db: AsyncSession = Depends(get_db),
 ):
-    return await update_transaction(transaction_id, current_user.id, data, db)
+    return await update_transaction(transaction_id, membership.org_id, data, db)
 
 
 @router.delete("/{transaction_id}", status_code=status.HTTP_200_OK)
 async def delete(
     transaction_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
+    membership: OrgMembership = Depends(get_org_member),
     db: AsyncSession = Depends(get_db),
 ):
-    await delete_transaction(transaction_id, current_user.id, db)
+    await delete_transaction(transaction_id, membership.org_id, db)
     return {"detail": "Transaction deleted"}

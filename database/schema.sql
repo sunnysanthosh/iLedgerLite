@@ -1,5 +1,31 @@
 -- LedgerLite Database Schema
 
+-- ── Organisations ────────────────────────────────────────────────────────────
+
+CREATE TABLE organisations (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name        VARCHAR(255) NOT NULL,
+    owner_id    UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    is_personal BOOLEAN DEFAULT FALSE,
+    is_active   BOOLEAN DEFAULT TRUE,
+    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE org_memberships (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    org_id      UUID NOT NULL REFERENCES organisations(id) ON DELETE CASCADE,
+    user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role        VARCHAR(20) NOT NULL CHECK (role IN ('owner', 'member', 'read_only')),
+    is_active   BOOLEAN DEFAULT TRUE,
+    invited_by  UUID REFERENCES users(id),
+    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE (org_id, user_id)
+);
+
+-- ── Core tables ──────────────────────────────────────────────────────────────
+
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -14,6 +40,7 @@ CREATE TABLE users (
 CREATE TABLE accounts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    org_id  UUID REFERENCES organisations(id),
     name VARCHAR(255) NOT NULL,
     type VARCHAR(50) NOT NULL CHECK (type IN ('cash', 'bank', 'credit_card', 'wallet', 'loan')),
     currency VARCHAR(3) DEFAULT 'INR',
@@ -26,6 +53,7 @@ CREATE TABLE accounts (
 CREATE TABLE categories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    org_id  UUID REFERENCES organisations(id),
     name VARCHAR(100) NOT NULL,
     type VARCHAR(10) NOT NULL CHECK (type IN ('income', 'expense')),
     icon VARCHAR(50),
@@ -36,6 +64,7 @@ CREATE TABLE categories (
 CREATE TABLE transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    org_id  UUID REFERENCES organisations(id),
     account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     category_id UUID REFERENCES categories(id) ON DELETE SET NULL,
     type VARCHAR(10) NOT NULL CHECK (type IN ('income', 'expense', 'transfer')),
@@ -49,6 +78,7 @@ CREATE TABLE transactions (
 CREATE TABLE customers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    org_id  UUID REFERENCES organisations(id),
     name VARCHAR(255) NOT NULL,
     phone VARCHAR(20),
     email VARCHAR(255),
@@ -60,6 +90,7 @@ CREATE TABLE customers (
 CREATE TABLE ledger_entries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    org_id  UUID REFERENCES organisations(id),
     customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
     type VARCHAR(10) NOT NULL CHECK (type IN ('debit', 'credit')),
     amount NUMERIC(15, 2) NOT NULL,
@@ -94,6 +125,7 @@ CREATE TABLE user_settings (
 CREATE TABLE notifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    org_id  UUID REFERENCES organisations(id),
     type VARCHAR(50) NOT NULL CHECK (type IN ('reminder', 'payment', 'overdue', 'system')),
     title VARCHAR(255) NOT NULL,
     message TEXT NOT NULL,
@@ -114,6 +146,12 @@ CREATE TABLE sync_log (
 );
 
 -- Indexes
+CREATE INDEX idx_org_memberships_org_id  ON org_memberships(org_id);
+CREATE INDEX idx_org_memberships_user_id ON org_memberships(user_id);
+CREATE INDEX idx_accounts_org_id         ON accounts(org_id);
+CREATE INDEX idx_transactions_org_id     ON transactions(org_id);
+CREATE INDEX idx_customers_org_id        ON customers(org_id);
+CREATE INDEX idx_ledger_entries_org_id   ON ledger_entries(org_id);
 CREATE INDEX idx_transactions_user_id ON transactions(user_id);
 CREATE INDEX idx_transactions_account_id ON transactions(account_id);
 CREATE INDEX idx_transactions_date ON transactions(transaction_date);

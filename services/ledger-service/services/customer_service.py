@@ -47,10 +47,11 @@ async def _calculate_outstanding_balance(customer_id: uuid.UUID, db: AsyncSessio
     return row.total_debit - row.total_credit
 
 
-async def create_customer(user_id: uuid.UUID, data: CustomerCreate, db: AsyncSession) -> Customer:
+async def create_customer(user_id: uuid.UUID, org_id: uuid.UUID, data: CustomerCreate, db: AsyncSession) -> Customer:
     customer = Customer(
         id=uuid.uuid4(),
         user_id=user_id,
+        org_id=org_id,
         name=data.name,
         phone=data.phone,
         email=data.email,
@@ -62,13 +63,13 @@ async def create_customer(user_id: uuid.UUID, data: CustomerCreate, db: AsyncSes
 
 
 async def list_customers(
-    user_id: uuid.UUID,
+    org_id: uuid.UUID,
     db: AsyncSession,
     search: str | None = None,
     skip: int = 0,
     limit: int = 20,
 ) -> tuple[list[tuple[Customer, Decimal]], int]:
-    base = select(Customer).where(Customer.user_id == user_id)
+    base = select(Customer).where(Customer.org_id == org_id)
 
     if search:
         pattern = f"%{search}%"
@@ -99,8 +100,8 @@ async def list_customers(
     return customers_with_balance, total
 
 
-async def get_customer(customer_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSession) -> Customer:
-    result = await db.execute(select(Customer).where(Customer.id == customer_id, Customer.user_id == user_id))
+async def get_customer(customer_id: uuid.UUID, org_id: uuid.UUID, db: AsyncSession) -> Customer:
+    result = await db.execute(select(Customer).where(Customer.id == customer_id, Customer.org_id == org_id))
     customer = result.scalars().first()
     if customer is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
@@ -108,9 +109,9 @@ async def get_customer(customer_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSess
 
 
 async def update_customer(
-    customer_id: uuid.UUID, user_id: uuid.UUID, data: CustomerUpdate, db: AsyncSession
+    customer_id: uuid.UUID, org_id: uuid.UUID, data: CustomerUpdate, db: AsyncSession
 ) -> Customer:
-    customer = await get_customer(customer_id, user_id, db)
+    customer = await get_customer(customer_id, org_id, db)
 
     if data.name is not None:
         customer.name = data.name

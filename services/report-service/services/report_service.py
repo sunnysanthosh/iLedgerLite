@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 
 async def get_profit_loss(
-    user_id: uuid.UUID,
+    org_id: uuid.UUID,
     start_date: date,
     end_date: date,
     db: AsyncSession,
@@ -36,7 +36,7 @@ async def get_profit_loss(
                 Decimal("0.00"),
             ).label("total_expenses"),
         ).where(
-            Transaction.user_id == user_id,
+            Transaction.org_id == org_id,
             Transaction.transaction_date >= start_dt,
             Transaction.transaction_date <= end_dt,
         )
@@ -52,7 +52,7 @@ async def get_profit_loss(
         )
         .outerjoin(Category, Transaction.category_id == Category.id)
         .where(
-            Transaction.user_id == user_id,
+            Transaction.org_id == org_id,
             Transaction.type == "income",
             Transaction.transaction_date >= start_dt,
             Transaction.transaction_date <= end_dt,
@@ -74,7 +74,7 @@ async def get_profit_loss(
         )
         .outerjoin(Category, Transaction.category_id == Category.id)
         .where(
-            Transaction.user_id == user_id,
+            Transaction.org_id == org_id,
             Transaction.type == "expense",
             Transaction.transaction_date >= start_dt,
             Transaction.transaction_date <= end_dt,
@@ -102,7 +102,7 @@ async def get_profit_loss(
 
 
 async def get_cashflow(
-    user_id: uuid.UUID,
+    org_id: uuid.UUID,
     start_date: date,
     end_date: date,
     period: str,
@@ -118,7 +118,7 @@ async def get_cashflow(
     result = await db.execute(
         select(Transaction)
         .where(
-            Transaction.user_id == user_id,
+            Transaction.org_id == org_id,
             Transaction.transaction_date >= start_dt,
             Transaction.transaction_date <= end_dt,
         )
@@ -173,7 +173,7 @@ async def get_cashflow(
 
 
 async def get_budget_report(
-    user_id: uuid.UUID,
+    org_id: uuid.UUID,
     start_date: date,
     end_date: date,
     db: AsyncSession,
@@ -193,7 +193,7 @@ async def get_budget_report(
         )
         .outerjoin(Category, Transaction.category_id == Category.id)
         .where(
-            Transaction.user_id == user_id,
+            Transaction.org_id == org_id,
             Transaction.type == "expense",
             Transaction.transaction_date >= start_dt,
             Transaction.transaction_date <= end_dt,
@@ -224,7 +224,7 @@ async def get_budget_report(
 
 
 async def get_summary(
-    user_id: uuid.UUID,
+    org_id: uuid.UUID,
     db: AsyncSession,
 ) -> dict:
     """Dashboard summary: balances, totals, top categories, outstanding ledger."""
@@ -233,7 +233,7 @@ async def get_summary(
         select(
             func.coalesce(func.sum(Account.balance), Decimal("0.00")).label("total_balance"),
             func.count(Account.id).label("account_count"),
-        ).where(Account.user_id == user_id, Account.is_active.is_(True))
+        ).where(Account.org_id == org_id, Account.is_active.is_(True))
     )
     acc = acc_result.one()
 
@@ -249,7 +249,7 @@ async def get_summary(
                 Decimal("0.00"),
             ).label("total_expenses"),
             func.count(Transaction.id).label("transaction_count"),
-        ).where(Transaction.user_id == user_id)
+        ).where(Transaction.org_id == org_id)
     )
     txn = txn_result.one()
 
@@ -260,7 +260,7 @@ async def get_summary(
             func.coalesce(func.sum(Transaction.amount), Decimal("0.00")).label("total"),
         )
         .outerjoin(Category, Transaction.category_id == Category.id)
-        .where(Transaction.user_id == user_id, Transaction.type == "expense")
+        .where(Transaction.org_id == org_id, Transaction.type == "expense")
         .group_by(Category.name)
         .order_by(func.sum(Transaction.amount).desc())
         .limit(5)
@@ -274,7 +274,7 @@ async def get_summary(
             func.coalesce(func.sum(Transaction.amount), Decimal("0.00")).label("total"),
         )
         .outerjoin(Category, Transaction.category_id == Category.id)
-        .where(Transaction.user_id == user_id, Transaction.type == "income")
+        .where(Transaction.org_id == org_id, Transaction.type == "income")
         .group_by(Category.name)
         .order_by(func.sum(Transaction.amount).desc())
         .limit(5)
@@ -293,7 +293,7 @@ async def get_summary(
                 Decimal("0.00"),
             ).label("payables"),
         ).where(
-            LedgerEntry.user_id == user_id,
+            LedgerEntry.org_id == org_id,
             LedgerEntry.is_settled.is_(False),
         )
     )
@@ -314,7 +314,7 @@ async def get_summary(
 
 
 async def export_report(
-    user_id: uuid.UUID,
+    org_id: uuid.UUID,
     start_date: date,
     end_date: date,
     report_format: str,
@@ -339,7 +339,7 @@ async def export_report(
         .outerjoin(Category, Transaction.category_id == Category.id)
         .outerjoin(Account, Transaction.account_id == Account.id)
         .where(
-            Transaction.user_id == user_id,
+            Transaction.org_id == org_id,
             Transaction.transaction_date >= start_dt,
             Transaction.transaction_date <= end_dt,
         )
