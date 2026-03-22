@@ -71,66 +71,73 @@ After this, every `kubectl apply -k infrastructure/kubernetes/overlays/staging` 
 
 Switch to `letsencrypt-prod` issuer in the production overlay when ready for a trusted certificate.
 
-## 6. Staging CI Service Account — `GCP_SA_KEY` (for Start/Stop workflows)
+## 6. Staging CI — GCP Auth via Workload Identity Federation (WIF)
 
-The [staging-start.yml](../../.github/workflows/staging-start.yml) and
-[staging-stop.yml](../../.github/workflows/staging-stop.yml) workflows authenticate to GCP
-using a dedicated CI service account (`ledgerlite-ci`). This SA is created by Terraform
-(staging only) and has the minimum permissions required:
+The GCP workflows (staging-start, staging-stop, cost-snapshot) authenticate using
+**Workload Identity Federation** — no long-lived JSON keys, no `GCP_SA_KEY` secret.
+GitHub Actions exchanges an OIDC token for short-lived GCP credentials automatically.
+
+The `ledgerlite-ci` service account has the minimum required roles:
 
 | Role | Why |
 |---|---|
 | `roles/container.admin` | Resize GKE node pool (scale to 0 / restore) |
 | `roles/cloudsql.admin` | Patch Cloud SQL activation policy (ALWAYS / NEVER) |
 
-### One-time setup (after `terraform apply` on staging)
+### Infrastructure (already configured — do not repeat)
+
+The WIF pool and provider were set up manually in Sprint 14:
 
 ```bash
-# 1. Find the CI SA email (output from terraform)
-cd infrastructure/terraform
-terraform output -raw ci_service_account_email
-# → ledgerlite-ci@project-6737f3c2-e011-49b7-ae4.iam.gserviceaccount.com
-
-# 2. Create a JSON key for the SA
-gcloud iam service-accounts keys create /tmp/ledgerlite-ci-key.json \
-  --iam-account="ledgerlite-ci@project-6737f3c2-e011-49b7-ae4.iam.gserviceaccount.com" \
-  --project="project-6737f3c2-e011-49b7-ae4"
-
-# 3. Copy the key content (it is already JSON — no base64 needed)
-cat /tmp/ledgerlite-ci-key.json | pbcopy
-
-# 4. Delete the local key file immediately (it is sensitive)
-rm /tmp/ledgerlite-ci-key.json
+# Workload Identity Pool: github-actions (global)
+# Provider: github (GitHub OIDC — scoped to sunnysanthosh/iLedgerLite only)
+# SA binding: principalSet for this repo → roles/iam.workloadIdentityUser on ledgerlite-ci
 ```
 
-### Add to GitHub as a repo-level secret
+If you ever need to recreate it (e.g. new GCP project):
 
 ```bash
-# Fastest method — paste directly from clipboard (step 3 above)
-gh secret set GCP_SA_KEY --body "$(pbpaste)"
-# OR pipe from file
-gh secret set GCP_SA_KEY < /tmp/ledgerlite-ci-key.json
+export PATH="/opt/homebrew/share/google-cloud-sdk/bin:$PATH"
+PROJECT=project-6737f3c2-e011-49b7-ae4
+PROJECT_NUMBER=1077475679584
+REPO="sunnysanthosh/iLedgerLite"
+SA="ledgerlite-ci@${PROJECT}.iam.gserviceaccount.com"
+
+# Create pool + provider
+gcloud iam workload-identity-pools create "github-actions" \
+  --project="$PROJECT" --location="global" --display-name="GitHub Actions"
+
+gcloud iam workload-identity-pools providers create-oidc "github" \
+  --project="$PROJECT" --location="global" \
+  --workload-identity-pool="github-actions" \
+  --issuer-uri="https://token.actions.githubusercontent.com" \
+  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" \
+  --attribute-condition="assertion.repository=='${REPO}'"
+
+# Bind SA
+gcloud iam service-accounts add-iam-policy-binding "$SA" \
+  --project="$PROJECT" \
+  --role="roles/iam.workloadIdentityUser" \
+  --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/github-actions/attribute.repository/${REPO}"
+
+# Set GitHub secrets
+gh secret set WIF_PROVIDER --body "projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/github-actions/providers/github"
+gh secret set WIF_SERVICE_ACCOUNT --body "$SA"
 ```
 
-Or via the UI: **GitHub → repo → Settings → Secrets and variables → Actions → New repository secret**
+### GitHub secrets (already set)
 
-| Secret name | Value |
-|---|---|
-| `GCP_SA_KEY` | The full JSON key content |
-
-> **Why repo-level and not environment-scoped?** The staging-start/stop and cost-snapshot
-> workflows do not require approval gates — they are utility workflows. Using a repo-level
-> secret avoids the `environment:` protection check that was previously causing every run
-> to fail silently when the secret was absent.
->
-> Production GKE is always-on — do not add scale-to-zero automation for production.
+| Secret name | Value | Set by |
+|---|---|---|
+| `WIF_PROVIDER` | `projects/1077475679584/locations/global/workloadIdentityPools/github-actions/providers/github` | Sprint 14 setup |
+| `WIF_SERVICE_ACCOUNT` | `ledgerlite-ci@project-6737f3c2-e011-49b7-ae4.iam.gserviceaccount.com` | Sprint 14 setup |
 
 ### Verify the workflow runs
 
 Go to: **GitHub → repo → Actions → Staging — Stop → Run workflow**
 
 A successful run will:
-1. Authenticate to GCP using `GCP_SA_KEY`
+1. Authenticate to GCP via WIF OIDC (no secrets on disk)
 2. Scale the `ledgerlite-staging-nodes` node pool to 0
 3. Set Cloud SQL `ledgerlite-staging-pg` to `activation-policy=NEVER`
 4. Print a summary of expected savings
@@ -153,9 +160,9 @@ To start staging for a test session:
 | Workflow | Environment | Secrets used |
 |---|---|---|
 | `deploy.yml` | staging / production | `KUBECONFIG`, `DB_PASSWORD`, `JWT_SECRET`, `DATABASE_URL` |
-| `staging-start.yml` | (repo-level) | `GCP_SA_KEY` |
-| `staging-stop.yml` | (repo-level) | `GCP_SA_KEY` |
-| `cost-snapshot.yml` | (repo-level) | `GCP_SA_KEY` (optional — degrades gracefully if absent) |
+| `staging-start.yml` | (repo-level) | `WIF_PROVIDER`, `WIF_SERVICE_ACCOUNT` |
+| `staging-stop.yml` | (repo-level) | `WIF_PROVIDER`, `WIF_SERVICE_ACCOUNT` |
+| `cost-snapshot.yml` | (repo-level) | `WIF_PROVIDER`, `WIF_SERVICE_ACCOUNT` (optional — degrades gracefully) |
 | `build.yml` | (repo-level) | `GITHUB_TOKEN` (automatic) |
 | `test.yml` | (repo-level) | none |
 | `lint.yml` | (repo-level) | none |

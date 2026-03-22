@@ -11,6 +11,10 @@ on:
     tags:
       - "sprint-*-done"
 
+permissions:
+  id-token: write   # required for Workload Identity Federation OIDC token
+  contents: write   # required to commit cost-snapshots.md back to main
+
 env:
   PROJECT_ID: project-6737f3c2-e011-49b7-ae4
 
@@ -18,9 +22,9 @@ jobs:
   snapshot:
     name: Capture GCP cost snapshot
     runs-on: ubuntu-latest
-    # No environment: staging — uses repo-level GCP_SA_KEY secret.
-    # If GCP_SA_KEY is not configured, GCP steps are skipped and the
-    # snapshot row is still committed with "no-gcp-creds" in each field.
+    # Auth via Workload Identity Federation (no long-lived keys needed).
+    # If WIF_PROVIDER / WIF_SERVICE_ACCOUNT are not set, GCP steps are skipped
+    # and the snapshot row is still committed with "no-gcp-creds" placeholders.
 
     steps:
       - name: Checkout
@@ -29,12 +33,13 @@ jobs:
           ref: main
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Authenticate to GCP
+      - name: Authenticate to GCP (Workload Identity Federation)
         id: gcp_auth
         continue-on-error: true
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
 
       - name: Set up gcloud
         if: steps.gcp_auth.outcome == 'success'
@@ -46,14 +51,14 @@ jobs:
         id: costs
         run: |
           SPRINT_TAG="${{ github.ref_name }}"
-          # Normalise tag: strip refs/tags/ prefix if present
+          # Normalise: strip refs/tags/ prefix if present
           SPRINT_TAG="${SPRINT_TAG#refs/tags/}"
-          # If not a sprint tag (e.g. triggered by branch push), use input
+          # If not a sprint tag (e.g. manual dispatch), use input
           if [[ "$SPRINT_TAG" != sprint-*-done ]]; then
             SPRINT_TAG="${{ inputs.sprint_tag }}"
           fi
           SNAPSHOT_DATE=$(date -u +"%Y-%m-%d")
-          echo "sprint_tag=$SPRINT_TAG"   >> "$GITHUB_OUTPUT"
+          echo "sprint_tag=$SPRINT_TAG"       >> "$GITHUB_OUTPUT"
           echo "snapshot_date=$SNAPSHOT_DATE" >> "$GITHUB_OUTPUT"
 
           if [ "${{ steps.gcp_auth.outcome }}" = "success" ]; then
@@ -65,11 +70,10 @@ jobs:
             SQL_STATE=$(gcloud sql instances describe ledgerlite-staging-pg \
               --format="value(state)" 2>/dev/null || echo "err")
           else
-            echo "⚠️  GCP_SA_KEY not configured — skipping GCP queries."
-            echo "    Add GCP_SA_KEY as a repo secret to enable auto-capture."
-            GKE_NODES="no-gcp-creds"
-            SQL_TIER="no-gcp-creds"
-            SQL_STATE="no-gcp-creds"
+            echo "⚠️  WIF auth failed or not configured — skipping GCP queries."
+            GKE_NODES="no-gcp-auth"
+            SQL_TIER="no-gcp-auth"
+            SQL_STATE="no-gcp-auth"
           fi
 
           echo "gke_nodes=$GKE_NODES"   >> "$GITHUB_OUTPUT"
