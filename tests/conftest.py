@@ -20,10 +20,27 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from shared.test_data import (
-    USERS, USER_SETTINGS, ACCOUNTS, ALL_CATEGORIES, TRANSACTIONS,
-    CUSTOMERS, LEDGER_ENTRIES,
-    USER_PRIYA_ID, USER_RAJESH_ID, USER_ANITA_ID,
-    USER_VIKRAM_ID, USER_MEENA_ID, USER_ARJUN_ID,
+    ACCOUNTS,
+    ALL_CATEGORIES,
+    CUSTOMERS,
+    LEDGER_ENTRIES,
+    ORG_ANITA_ID,
+    ORG_ARJUN_ID,
+    ORG_MEENA_ID,
+    ORG_MEMBERSHIPS,
+    ORG_PRIYA_ID,
+    ORG_RAJESH_ID,
+    ORG_VIKRAM_ID,
+    ORGANISATIONS,
+    TRANSACTIONS,
+    USER_ANITA_ID,
+    USER_ARJUN_ID,
+    USER_MEENA_ID,
+    USER_PRIYA_ID,
+    USER_RAJESH_ID,
+    USER_SETTINGS,
+    USER_VIKRAM_ID,
+    USERS,
     make_auth_headers,
 )
 
@@ -32,14 +49,15 @@ from shared.test_data import (
 # ---------------------------------------------------------------------------
 SERVICES_DIR = Path(__file__).resolve().parent.parent / "services"
 ALL_SERVICE_DIRS = ["auth-service", "user-service", "transaction-service", "ledger-service"]
-SERVICE_MODULE_PREFIXES = ('models', 'routers', 'services', 'schemas', 'db', 'config', 'main')
+SERVICE_MODULE_PREFIXES = ("models", "routers", "services", "schemas", "db", "config", "main")
 
 
 def _clear_service_modules():
     """Remove service-local modules from sys.modules to allow clean reimport."""
     to_remove = [
-        name for name in list(sys.modules)
-        if any(name == p or name.startswith(p + '.') for p in SERVICE_MODULE_PREFIXES)
+        name
+        for name in list(sys.modules)
+        if any(name == p or name.startswith(p + ".") for p in SERVICE_MODULE_PREFIXES)
     ]
     for name in to_remove:
         del sys.modules[name]
@@ -69,13 +87,16 @@ def _uid(s):
 def auth_engine():
     return create_async_engine("sqlite+aiosqlite:///:memory:", echo=False, use_insertmanyvalues=False)
 
+
 @pytest.fixture(scope="session")
 def user_engine():
     return create_async_engine("sqlite+aiosqlite:///:memory:", echo=False, use_insertmanyvalues=False)
 
+
 @pytest.fixture(scope="session")
 def txn_engine():
     return create_async_engine("sqlite+aiosqlite:///:memory:", echo=False, use_insertmanyvalues=False)
+
 
 @pytest.fixture(scope="session")
 def ledger_engine():
@@ -94,10 +115,18 @@ async def create_all_tables(auth_engine, user_engine, txn_engine, ledger_engine)
     configs = [
         ("auth", "auth-service", auth_engine, ["models.user"]),
         ("user", "user-service", user_engine, ["models.user", "models.user_settings"]),
-        ("txn", "transaction-service", txn_engine,
-         ["models.user", "models.account", "models.category", "models.transaction"]),
-        ("ledger", "ledger-service", ledger_engine,
-         ["models.user", "models.customer", "models.ledger_entry"]),
+        (
+            "txn",
+            "transaction-service",
+            txn_engine,
+            ["models.user", "models.org", "models.account", "models.category", "models.transaction"],
+        ),
+        (
+            "ledger",
+            "ledger-service",
+            ledger_engine,
+            ["models.user", "models.org", "models.customer", "models.ledger_entry"],
+        ),
     ]
 
     for svc_name, svc_dir, engine, model_modules in configs:
@@ -136,6 +165,7 @@ async def auth_db(auth_engine) -> AsyncGenerator[AsyncSession, None]:
             await session.close()
             await conn.rollback()
 
+
 @pytest.fixture
 async def user_db(user_engine) -> AsyncGenerator[AsyncSession, None]:
     sm = async_sessionmaker(user_engine, class_=AsyncSession, expire_on_commit=False)
@@ -147,6 +177,7 @@ async def user_db(user_engine) -> AsyncGenerator[AsyncSession, None]:
             await session.close()
             await conn.rollback()
 
+
 @pytest.fixture
 async def txn_db(txn_engine) -> AsyncGenerator[AsyncSession, None]:
     sm = async_sessionmaker(txn_engine, class_=AsyncSession, expire_on_commit=False)
@@ -157,6 +188,7 @@ async def txn_db(txn_engine) -> AsyncGenerator[AsyncSession, None]:
         finally:
             await session.close()
             await conn.rollback()
+
 
 @pytest.fixture
 async def ledger_db(ledger_engine) -> AsyncGenerator[AsyncSession, None]:
@@ -179,6 +211,7 @@ def fake_redis():
 # Seeded ASGI clients
 # ===========================================================================
 
+
 @pytest.fixture
 async def seeded_auth_client(auth_db, fake_redis) -> AsyncGenerator[AsyncClient, None]:
     """Auth-service client with all seed users pre-loaded."""
@@ -186,10 +219,16 @@ async def seeded_auth_client(auth_db, fake_redis) -> AsyncGenerator[AsyncClient,
     from models.user import User
 
     for u in USERS:
-        auth_db.add(User(
-            id=_uid(u["id"]), email=u["email"], password_hash=u["password_hash"],
-            full_name=u["full_name"], phone=u["phone"], is_active=u["is_active"],
-        ))
+        auth_db.add(
+            User(
+                id=_uid(u["id"]),
+                email=u["email"],
+                password_hash=u["password_hash"],
+                full_name=u["full_name"],
+                phone=u["phone"],
+                is_active=u["is_active"],
+            )
+        )
     await auth_db.flush()
 
     from db.session import get_db
@@ -218,20 +257,31 @@ async def seeded_user_client(user_db) -> AsyncGenerator[AsyncClient, None]:
     from models.user_settings import UserSettings
 
     for u in USERS:
-        user_db.add(User(
-            id=_uid(u["id"]), email=u["email"], password_hash=u["password_hash"],
-            full_name=u["full_name"], phone=u["phone"], is_active=u["is_active"],
-        ))
+        user_db.add(
+            User(
+                id=_uid(u["id"]),
+                email=u["email"],
+                password_hash=u["password_hash"],
+                full_name=u["full_name"],
+                phone=u["phone"],
+                is_active=u["is_active"],
+            )
+        )
     await user_db.flush()
 
     for s in USER_SETTINGS:
-        user_db.add(UserSettings(
-            id=_uid(s["id"]), user_id=_uid(s["user_id"]),
-            account_type=s["account_type"], currency=s["currency"],
-            language=s["language"], business_category=s["business_category"],
-            notifications_enabled=s["notifications_enabled"],
-            onboarding_completed=s["onboarding_completed"],
-        ))
+        user_db.add(
+            UserSettings(
+                id=_uid(s["id"]),
+                user_id=_uid(s["user_id"]),
+                account_type=s["account_type"],
+                currency=s["currency"],
+                language=s["language"],
+                business_category=s["business_category"],
+                notifications_enabled=s["notifications_enabled"],
+                onboarding_completed=s["onboarding_completed"],
+            )
+        )
     await user_db.flush()
 
     from db.session import get_db
@@ -251,40 +301,91 @@ async def seeded_user_client(user_db) -> AsyncGenerator[AsyncClient, None]:
 async def seeded_txn_client(txn_db) -> AsyncGenerator[AsyncClient, None]:
     """Transaction-service client with all seed data pre-loaded."""
     _activate_service("transaction-service")
-    from models.user import User
     from models.account import Account
     from models.category import Category
+    from models.org import Organisation, OrgMembership
     from models.transaction import Transaction
+    from models.user import User
 
     for u in USERS:
-        txn_db.add(User(
-            id=_uid(u["id"]), email=u["email"], password_hash=u["password_hash"],
-            full_name=u["full_name"], phone=u["phone"], is_active=u["is_active"],
-        ))
+        txn_db.add(
+            User(
+                id=_uid(u["id"]),
+                email=u["email"],
+                password_hash=u["password_hash"],
+                full_name=u["full_name"],
+                phone=u["phone"],
+                is_active=u["is_active"],
+            )
+        )
+    await txn_db.flush()
+
+    for o in ORGANISATIONS:
+        txn_db.add(
+            Organisation(
+                id=_uid(o["id"]),
+                name=o["name"],
+                owner_id=_uid(o["owner_id"]),
+                is_personal=o["is_personal"],
+                is_active=o["is_active"],
+            )
+        )
+    await txn_db.flush()
+
+    for m in ORG_MEMBERSHIPS:
+        txn_db.add(
+            OrgMembership(
+                id=_uid(m["id"]),
+                org_id=_uid(m["org_id"]),
+                user_id=_uid(m["user_id"]),
+                role=m["role"],
+                is_active=m["is_active"],
+            )
+        )
     await txn_db.flush()
 
     for a in ACCOUNTS:
-        txn_db.add(Account(
-            id=_uid(a["id"]), user_id=_uid(a["user_id"]), name=a["name"],
-            type=a["type"], currency=a["currency"],
-            balance=a["balance"], is_active=a["is_active"],
-        ))
+        txn_db.add(
+            Account(
+                id=_uid(a["id"]),
+                user_id=_uid(a["user_id"]),
+                org_id=_uid(a["org_id"]),
+                name=a["name"],
+                type=a["type"],
+                currency=a["currency"],
+                balance=a["balance"],
+                is_active=a["is_active"],
+            )
+        )
     await txn_db.flush()
 
     for c in ALL_CATEGORIES:
-        txn_db.add(Category(
-            id=_uid(c["id"]), user_id=_uid(c["user_id"]), name=c["name"],
-            type=c["type"], icon=c["icon"], is_system=c["is_system"],
-        ))
+        txn_db.add(
+            Category(
+                id=_uid(c["id"]),
+                user_id=_uid(c["user_id"]),
+                name=c["name"],
+                type=c["type"],
+                icon=c["icon"],
+                is_system=c["is_system"],
+            )
+        )
     await txn_db.flush()
 
     for t in TRANSACTIONS:
-        txn_db.add(Transaction(
-            id=_uid(t["id"]), user_id=_uid(t["user_id"]),
-            account_id=_uid(t["account_id"]), category_id=_uid(t["category_id"]),
-            type=t["type"], amount=t["amount"], description=t["description"],
-            transaction_date=t["transaction_date"],
-        ))
+        txn_db.add(
+            Transaction(
+                id=_uid(t["id"]),
+                user_id=_uid(t["user_id"]),
+                org_id=_uid(t["org_id"]),
+                account_id=_uid(t["account_id"]),
+                category_id=_uid(t["category_id"]),
+                type=t["type"],
+                amount=t["amount"],
+                description=t["description"],
+                transaction_date=t["transaction_date"],
+            )
+        )
     await txn_db.flush()
 
     from db.session import get_db
@@ -304,31 +405,76 @@ async def seeded_txn_client(txn_db) -> AsyncGenerator[AsyncClient, None]:
 async def seeded_ledger_client(ledger_db) -> AsyncGenerator[AsyncClient, None]:
     """Ledger-service client with all seed data pre-loaded."""
     _activate_service("ledger-service")
-    from models.user import User
     from models.customer import Customer
     from models.ledger_entry import LedgerEntry
+    from models.org import Organisation, OrgMembership
+    from models.user import User
 
     for u in USERS:
-        ledger_db.add(User(
-            id=_uid(u["id"]), email=u["email"], password_hash=u["password_hash"],
-            full_name=u["full_name"], phone=u["phone"], is_active=u["is_active"],
-        ))
+        ledger_db.add(
+            User(
+                id=_uid(u["id"]),
+                email=u["email"],
+                password_hash=u["password_hash"],
+                full_name=u["full_name"],
+                phone=u["phone"],
+                is_active=u["is_active"],
+            )
+        )
+    await ledger_db.flush()
+
+    for o in ORGANISATIONS:
+        ledger_db.add(
+            Organisation(
+                id=_uid(o["id"]),
+                name=o["name"],
+                owner_id=_uid(o["owner_id"]),
+                is_personal=o["is_personal"],
+                is_active=o["is_active"],
+            )
+        )
+    await ledger_db.flush()
+
+    for m in ORG_MEMBERSHIPS:
+        ledger_db.add(
+            OrgMembership(
+                id=_uid(m["id"]),
+                org_id=_uid(m["org_id"]),
+                user_id=_uid(m["user_id"]),
+                role=m["role"],
+                is_active=m["is_active"],
+            )
+        )
     await ledger_db.flush()
 
     for c in CUSTOMERS:
-        ledger_db.add(Customer(
-            id=_uid(c["id"]), user_id=_uid(c["user_id"]), name=c["name"],
-            phone=c["phone"], email=c["email"], address=c["address"],
-        ))
+        ledger_db.add(
+            Customer(
+                id=_uid(c["id"]),
+                user_id=_uid(c["user_id"]),
+                org_id=_uid(c["org_id"]),
+                name=c["name"],
+                phone=c["phone"],
+                email=c["email"],
+                address=c["address"],
+            )
+        )
     await ledger_db.flush()
 
     for e in LEDGER_ENTRIES:
-        ledger_db.add(LedgerEntry(
-            id=_uid(e["id"]), user_id=_uid(e["user_id"]),
-            customer_id=_uid(e["customer_id"]),
-            type=e["type"], amount=e["amount"], description=e["description"],
-            due_date=e["due_date"], is_settled=e["is_settled"],
-        ))
+        ledger_db.add(
+            LedgerEntry(
+                id=_uid(e["id"]),
+                user_id=_uid(e["user_id"]),
+                org_id=_uid(e["org_id"]),
+                customer_id=_uid(e["customer_id"]),
+                type=e["type"],
+                amount=e["amount"],
+                description=e["description"],
+                due_date=e["due_date"],
+                is_settled=e["is_settled"],
+            )
+        )
     await ledger_db.flush()
 
     from db.session import get_db
@@ -345,28 +491,33 @@ async def seeded_ledger_client(ledger_db) -> AsyncGenerator[AsyncClient, None]:
 
 
 # ===========================================================================
-# Per-user auth header fixtures
+# Per-user auth header fixtures (include X-Org-ID for org-scoped endpoints)
 # ===========================================================================
 @pytest.fixture(scope="session")
 def priya_headers():
-    return make_auth_headers(USER_PRIYA_ID)
+    return make_auth_headers(USER_PRIYA_ID, org_id=ORG_PRIYA_ID)
+
 
 @pytest.fixture(scope="session")
 def rajesh_headers():
-    return make_auth_headers(USER_RAJESH_ID)
+    return make_auth_headers(USER_RAJESH_ID, org_id=ORG_RAJESH_ID)
+
 
 @pytest.fixture(scope="session")
 def anita_headers():
-    return make_auth_headers(USER_ANITA_ID)
+    return make_auth_headers(USER_ANITA_ID, org_id=ORG_ANITA_ID)
+
 
 @pytest.fixture(scope="session")
 def vikram_headers():
-    return make_auth_headers(USER_VIKRAM_ID)
+    return make_auth_headers(USER_VIKRAM_ID, org_id=ORG_VIKRAM_ID)
+
 
 @pytest.fixture(scope="session")
 def meena_headers():
-    return make_auth_headers(USER_MEENA_ID)
+    return make_auth_headers(USER_MEENA_ID, org_id=ORG_MEENA_ID)
+
 
 @pytest.fixture(scope="session")
 def arjun_headers():
-    return make_auth_headers(USER_ARJUN_ID)
+    return make_auth_headers(USER_ARJUN_ID, org_id=ORG_ARJUN_ID)

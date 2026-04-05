@@ -5,16 +5,13 @@ Runs in-process using ASGI test clients with SQLite + seed data.
 Run with: cd C:/Temp/LedgerLite && pytest tests/smoke/ -v
 """
 
-import pytest
-
-from shared.test_data import USERS, RAW_PASSWORD
+from shared.test_data import RAW_PASSWORD
 
 
 # ===========================================================================
 # Health Checks
 # ===========================================================================
 class TestHealthChecks:
-
     async def test_auth_health(self, seeded_auth_client):
         resp = await seeded_auth_client.get("/health")
         assert resp.status_code == 200
@@ -40,7 +37,6 @@ class TestHealthChecks:
 # Auth Service Smoke
 # ===========================================================================
 class TestAuthSmoke:
-
     async def test_login_active_user(self, seeded_auth_client):
         """Login with a seeded active user (Priya)."""
         resp = await seeded_auth_client.post(
@@ -73,7 +69,6 @@ class TestAuthSmoke:
 # User Service Smoke
 # ===========================================================================
 class TestUserSmoke:
-
     async def test_get_profile(self, seeded_user_client, priya_headers):
         """Authenticated user can fetch their profile."""
         resp = await seeded_user_client.get("/users/me", headers=priya_headers)
@@ -94,7 +89,6 @@ class TestUserSmoke:
 # Transaction Service Smoke
 # ===========================================================================
 class TestTransactionSmoke:
-
     async def test_list_accounts(self, seeded_txn_client, priya_headers):
         """User can list their accounts."""
         resp = await seeded_txn_client.get("/accounts", headers=priya_headers)
@@ -115,7 +109,6 @@ class TestTransactionSmoke:
 # Ledger Service Smoke
 # ===========================================================================
 class TestLedgerSmoke:
-
     async def test_list_customers(self, seeded_ledger_client, rajesh_headers):
         """Business user can list their customers."""
         resp = await seeded_ledger_client.get("/customers", headers=rajesh_headers)

@@ -1589,6 +1589,67 @@ LEDGER_ENTRIES = [
 # ---------------------------------------------------------------------------
 # Receipts (5)
 # ---------------------------------------------------------------------------
+ORGANISATIONS = [
+    {
+        "id": ORG_PRIYA_ID,
+        "name": "Priya Sharma's Personal",
+        "owner_id": USER_PRIYA_ID,
+        "is_personal": True,
+        "is_active": True,
+    },
+    {
+        "id": ORG_RAJESH_ID,
+        "name": "Rajesh Kumar's Personal",
+        "owner_id": USER_RAJESH_ID,
+        "is_personal": True,
+        "is_active": True,
+    },
+    {
+        "id": ORG_ANITA_ID,
+        "name": "Anita Patel's Personal",
+        "owner_id": USER_ANITA_ID,
+        "is_personal": True,
+        "is_active": True,
+    },
+    {
+        "id": ORG_VIKRAM_ID,
+        "name": "Vikram Singh's Personal",
+        "owner_id": USER_VIKRAM_ID,
+        "is_personal": True,
+        "is_active": True,
+    },
+    {
+        "id": ORG_MEENA_ID,
+        "name": "Meena Reddy's Personal",
+        "owner_id": USER_MEENA_ID,
+        "is_personal": True,
+        "is_active": True,
+    },
+    {
+        "id": ORG_ARJUN_ID,
+        "name": "Arjun Nair's Personal",
+        "owner_id": USER_ARJUN_ID,
+        "is_personal": True,
+        "is_active": True,
+    },
+]
+
+ORG_MEMBERSHIPS = [
+    {"id": ORG_MEMBER_IDS[0], "org_id": ORG_PRIYA_ID, "user_id": USER_PRIYA_ID, "role": "owner", "is_active": True},
+    {"id": ORG_MEMBER_IDS[1], "org_id": ORG_RAJESH_ID, "user_id": USER_RAJESH_ID, "role": "owner", "is_active": True},
+    {"id": ORG_MEMBER_IDS[2], "org_id": ORG_ANITA_ID, "user_id": USER_ANITA_ID, "role": "owner", "is_active": True},
+    {"id": ORG_MEMBER_IDS[3], "org_id": ORG_VIKRAM_ID, "user_id": USER_VIKRAM_ID, "role": "owner", "is_active": True},
+    {"id": ORG_MEMBER_IDS[4], "org_id": ORG_MEENA_ID, "user_id": USER_MEENA_ID, "role": "owner", "is_active": True},
+    {"id": ORG_MEMBER_IDS[5], "org_id": ORG_ARJUN_ID, "user_id": USER_ARJUN_ID, "role": "owner", "is_active": True},
+]
+
+# Backfill org_id for all data collections using USER_ORG_MAP
+for _lst in (ACCOUNTS, TRANSACTIONS, CUSTOMERS, LEDGER_ENTRIES):
+    for _item in _lst:
+        if "user_id" in _item and "org_id" not in _item:
+            _item["org_id"] = USER_ORG_MAP.get(_item["user_id"])
+
+
 RECEIPTS = [
     {
         "id": RECEIPT_IDS[0],

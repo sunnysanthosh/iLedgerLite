@@ -5,14 +5,7 @@ Runs in-process using ASGI test clients with SQLite + seed data.
 Run with: cd C:/Temp/LedgerLite && pytest tests/regression/ -v
 """
 
-import pytest
 from decimal import Decimal
-
-from shared.test_data import (
-    USER_PRIYA_ID, USER_RAJESH_ID, USER_ANITA_ID,
-    USER_VIKRAM_ID, USER_MEENA_ID, USER_ARJUN_ID,
-    RAW_PASSWORD,
-)
 
 
 # ===========================================================================
@@ -62,7 +55,6 @@ class TestUserIsolation:
 # Inactive User Lockout
 # ===========================================================================
 class TestInactiveUserLockout:
-
     async def test_meena_cannot_access_profile(self, seeded_user_client, meena_headers):
         """Inactive user (Meena) should be rejected by user-service."""
         resp = await seeded_user_client.get("/users/me", headers=meena_headers)
@@ -83,7 +75,6 @@ class TestInactiveUserLockout:
 # Account Balance Integrity
 # ===========================================================================
 class TestAccountBalances:
-
     async def test_priya_has_correct_account_types(self, seeded_txn_client, priya_headers):
         """Priya should have cash, bank, and credit_card accounts."""
         resp = await seeded_txn_client.get("/accounts", headers=priya_headers)
@@ -117,7 +108,6 @@ class TestAccountBalances:
 # Ledger Customer Counts
 # ===========================================================================
 class TestLedgerCustomerCounts:
-
     async def test_rajesh_has_4_customers(self, seeded_ledger_client, rajesh_headers):
         resp = await seeded_ledger_client.get("/customers", headers=rajesh_headers)
         assert resp.status_code == 200
@@ -137,7 +127,6 @@ class TestLedgerCustomerCounts:
 # Edge Cases
 # ===========================================================================
 class TestEdgeCases:
-
     async def test_arjun_usd_account(self, seeded_txn_client, arjun_headers):
         """Arjun has a USD wallet."""
         resp = await seeded_txn_client.get("/accounts", headers=arjun_headers)
