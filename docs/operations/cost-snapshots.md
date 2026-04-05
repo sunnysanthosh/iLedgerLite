@@ -10,3 +10,4 @@
 | 2026-03-02 | sprint-12-done | 3 | db-f1-micro | RUNNABLE | manual capture; nightly-stop cron not working (GCP_SA_KEY missing) |
 | 2026-03-14 | sprint-13-rbac-baseline | 3 | db-f1-micro | RUNNABLE | manual capture; always-on (nightly-stop still failing) |
 | 2026-03-22 | sprint-14-done | 3 | db-f1-micro | RUNNABLE | manual capture; **hibernated same day** — GKE=0, SQL=STOPPED |
+| 2026-04-05 | sprint-15-done |  | db-f1-micro | STOPPED | auto-captured |
