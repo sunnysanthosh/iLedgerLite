@@ -40,7 +40,7 @@ CREATE TABLE users (
 CREATE TABLE accounts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    org_id  UUID REFERENCES organisations(id),
+    org_id  UUID NOT NULL REFERENCES organisations(id),
     name VARCHAR(255) NOT NULL,
     type VARCHAR(50) NOT NULL CHECK (type IN ('cash', 'bank', 'credit_card', 'wallet', 'loan')),
     currency VARCHAR(3) DEFAULT 'INR',
@@ -64,7 +64,7 @@ CREATE TABLE categories (
 CREATE TABLE transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    org_id  UUID REFERENCES organisations(id),
+    org_id  UUID NOT NULL REFERENCES organisations(id),
     account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     category_id UUID REFERENCES categories(id) ON DELETE SET NULL,
     type VARCHAR(10) NOT NULL CHECK (type IN ('income', 'expense', 'transfer')),
@@ -78,7 +78,7 @@ CREATE TABLE transactions (
 CREATE TABLE customers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    org_id  UUID REFERENCES organisations(id),
+    org_id  UUID NOT NULL REFERENCES organisations(id),
     name VARCHAR(255) NOT NULL,
     phone VARCHAR(20),
     email VARCHAR(255),
@@ -90,7 +90,7 @@ CREATE TABLE customers (
 CREATE TABLE ledger_entries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    org_id  UUID REFERENCES organisations(id),
+    org_id  UUID NOT NULL REFERENCES organisations(id),
     customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
     type VARCHAR(10) NOT NULL CHECK (type IN ('debit', 'credit')),
     amount NUMERIC(15, 2) NOT NULL,
@@ -125,7 +125,7 @@ CREATE TABLE user_settings (
 CREATE TABLE notifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    org_id  UUID REFERENCES organisations(id),
+    org_id  UUID NOT NULL REFERENCES organisations(id),
     type VARCHAR(50) NOT NULL CHECK (type IN ('reminder', 'payment', 'overdue', 'system')),
     title VARCHAR(255) NOT NULL,
     message TEXT NOT NULL,
@@ -145,7 +145,20 @@ CREATE TABLE sync_log (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+CREATE TABLE audit_log (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    org_id      UUID NOT NULL REFERENCES organisations(id) ON DELETE CASCADE,
+    actor_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    action      VARCHAR(50) NOT NULL,
+    entity_type VARCHAR(50) NOT NULL,
+    entity_id   UUID,
+    details     TEXT,
+    created_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Indexes
+CREATE INDEX idx_audit_log_org_id   ON audit_log(org_id);
+CREATE INDEX idx_audit_log_actor_id ON audit_log(actor_id);
 CREATE INDEX idx_org_memberships_org_id  ON org_memberships(org_id);
 CREATE INDEX idx_org_memberships_user_id ON org_memberships(user_id);
 CREATE INDEX idx_accounts_org_id         ON accounts(org_id);

@@ -14,7 +14,7 @@ class Transaction(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    org_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
+    org_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
     account_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False)
     category_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True

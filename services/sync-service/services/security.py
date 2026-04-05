@@ -68,3 +68,14 @@ async def get_org_member(
     if not membership:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a member of this organisation")
     return membership
+
+
+async def get_write_member(
+    membership: OrgMembership = Depends(get_org_member),
+) -> OrgMembership:
+    """Like get_org_member but rejects read_only members on mutating endpoints."""
+    if membership.role == "read_only":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Read-only members cannot perform this action"
+        )
+    return membership

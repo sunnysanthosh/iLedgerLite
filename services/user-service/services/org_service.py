@@ -1,12 +1,36 @@
+import json
 import uuid
 
 from fastapi import HTTPException, status
+from models.audit_log import AuditLog
 from models.org import Organisation, OrgMembership
 from models.user import User
 from schemas.org import MemberInvite, MemberResponse, MemberRoleUpdate, OrgCreate, OrgListItem, OrgResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
+
+async def _audit(
+    db: AsyncSession,
+    org_id: uuid.UUID,
+    actor_id: uuid.UUID,
+    action: str,
+    entity_type: str,
+    entity_id: uuid.UUID | None = None,
+    details: dict | None = None,
+) -> None:
+    entry = AuditLog(
+        id=uuid.uuid4(),
+        org_id=org_id,
+        actor_id=actor_id,
+        action=action,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        details=json.dumps(details) if details else None,
+    )
+    db.add(entry)
+    await db.flush()
 
 
 async def create_org(data: OrgCreate, owner: User, db: AsyncSession) -> OrgResponse:
@@ -125,6 +149,16 @@ async def invite_member(org_id: uuid.UUID, data: MemberInvite, inviter: User, db
     db.add(new_membership)
     await db.flush()
 
+    await _audit(
+        db,
+        org_id,
+        inviter.id,
+        "member_invited",
+        "org_membership",
+        invitee.id,
+        {"email": invitee.email, "role": data.role},
+    )
+
     return MemberResponse(
         user_id=invitee.id,
         email=invitee.email,
@@ -155,11 +189,22 @@ async def change_member_role(
     if target_m is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
 
+    old_role = target_m.role
     target_m.role = data.role
     await db.flush()
 
     result2 = await db.execute(select(User).where(User.id == target_user_id))
     target_user = result2.scalars().first()
+
+    await _audit(
+        db,
+        org_id,
+        requester.id,
+        "role_changed",
+        "org_membership",
+        target_user_id,
+        {"from": old_role, "to": data.role, "email": target_user.email},
+    )
 
     return MemberResponse(
         user_id=target_user.id,
@@ -197,14 +242,32 @@ async def remove_member(org_id: uuid.UUID, target_user_id: uuid.UUID, requester:
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot remove the last owner of an organisation"
             )
 
+    removed_role = target_m.role
     target_m.is_active = False
     await db.flush()
+
+    result3 = await db.execute(select(User).where(User.id == target_user_id))
+    removed_user = result3.scalars().first()
+    await _audit(
+        db,
+        org_id,
+        requester.id,
+        "member_removed",
+        "org_membership",
+        target_user_id,
+        {"email": removed_user.email if removed_user else None, "role": removed_role},
+    )
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 
-async def _require_membership(org_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSession) -> OrgMembership:
+async def _require_membership(
+    org_id: uuid.UUID,
+    user_id: uuid.UUID,
+    db: AsyncSession,
+    required_role: str | None = None,
+) -> OrgMembership:
     result = await db.execute(
         select(OrgMembership)
         .options(selectinload(OrgMembership.organisation))
@@ -218,6 +281,10 @@ async def _require_membership(org_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSe
     membership = result.scalars().first()
     if membership is None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a member of this organisation")
+    if required_role and membership.role != required_role:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=f"Only {required_role}s can perform this action"
+        )
     return membership
 
 
@@ -238,3 +305,30 @@ async def _load_members(org_id: uuid.UUID, db: AsyncSession) -> list[MemberRespo
         )
         for m, u in rows
     ]
+
+
+async def list_audit_log(
+    org_id: uuid.UUID,
+    user: User,
+    db: AsyncSession,
+    skip: int = 0,
+    limit: int = 50,
+) -> tuple[list, int]:
+    """Return audit log entries for the org. Owners only."""
+    await _require_membership(org_id, user.id, db, required_role="owner")
+
+    from sqlalchemy import func as sqlfunc
+
+    count_result = await db.execute(select(sqlfunc.count()).select_from(AuditLog).where(AuditLog.org_id == org_id))
+    total = count_result.scalar() or 0
+
+    result = await db.execute(
+        select(AuditLog)
+        .where(AuditLog.org_id == org_id)
+        .order_by(AuditLog.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .execution_options(populate_existing=True)
+    )
+    entries = result.scalars().all()
+    return entries, total

@@ -11,7 +11,7 @@ from schemas.notification import (
     ReminderRequest,
 )
 from services.notification_service import create_reminder, list_notifications, mark_as_read
-from services.security import get_current_user, get_org_member
+from services.security import get_current_user, get_org_member, get_write_member
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
@@ -54,7 +54,7 @@ async def mark_read_endpoint(
 @router.post("/reminder", response_model=NotificationResponse, status_code=201)
 async def send_reminder_endpoint(
     data: ReminderRequest,
-    membership: OrgMembership = Depends(get_org_member),
+    membership: OrgMembership = Depends(get_write_member),
     db: AsyncSession = Depends(get_db),
 ):
     return await create_reminder(membership.user_id, membership.org_id, data.customer_id, data.message, db)
