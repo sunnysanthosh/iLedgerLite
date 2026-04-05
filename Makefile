@@ -1,6 +1,7 @@
 SERVICES := auth-service user-service transaction-service ledger-service report-service notification-service ai-service sync-service
 
-.PHONY: test-all test-auth test-user test-transaction test-ledger test-report test-notification test-ai test-sync lint format \
+.PHONY: test-all test-smoke test-regression test-schema test-e2e test-auth test-user test-transaction test-ledger \
+        test-report test-notification test-ai test-sync lint format \
         dev-start dev-stop dev-rebuild dev-status dev-logs dev-reset
 
 # ---------------------------------------------------------------------------
@@ -51,11 +52,29 @@ dev-reset:
 	docker compose down -v
 	@echo "✅ Full reset done. Run 'make dev-start' for a clean environment."
 
+## Layer 1 — unit tests for every service (run from each service dir)
 test-all:
 	@for svc in $(SERVICES); do \
 		echo "\n===== Testing $$svc ====="; \
 		(cd services/$$svc && python -m pytest tests/ -v) || exit 1; \
 	done
+
+## Layer 2 — smoke tests: health checks + auth flows + basic CRUD via ASGI clients
+test-smoke:
+	python -m pytest tests/smoke/ -v
+
+## Layer 3 — regression tests: data isolation, business rules, edge cases
+test-regression:
+	python -m pytest tests/regression/ -v
+
+## Layer 4 — schema consistency: validate seed data covers all NOT NULL columns + FKs
+test-schema:
+	python tests/validate_seed_schema.py
+
+## Sprint gate: run ALL layers in order. Must be green before merging to main.
+## Usage: make test-e2e
+test-e2e: test-schema test-all test-smoke test-regression
+	@echo "\n===== All gates passed (schema + unit + smoke + regression) ====="
 
 test-auth:
 	cd services/auth-service && python -m pytest tests/ -v

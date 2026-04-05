@@ -7,6 +7,9 @@ on:
     branches: [main]
 
 jobs:
+  # ---------------------------------------------------------------------------
+  # Layer 0 — detect which service paths changed (skip unchanged service tests)
+  # ---------------------------------------------------------------------------
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
@@ -18,6 +21,8 @@ jobs:
       notification: ${{ steps.filter.outputs.notification }}
       ai: ${{ steps.filter.outputs.ai }}
       sync: ${{ steps.filter.outputs.sync }}
+      # Cross-cutting: shared/, tests/, database/ changes trigger ALL layers
+      cross_cutting: ${{ steps.filter.outputs.cross_cutting }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -34,16 +39,23 @@ jobs:
               - 'services/ledger-service/**'
             report:
               - 'services/report-service/**'
-              - 'shared/**'
             notification:
               - 'services/notification-service/**'
-              - 'shared/**'
             ai:
               - 'services/ai-service/**'
             sync:
               - 'services/sync-service/**'
+            cross_cutting:
+              - 'shared/**'
+              - 'tests/**'
+              - 'database/**'
 
+  # ---------------------------------------------------------------------------
+  # Layer 1 — per-service unit tests (60% coverage gate)
+  # Always run if the service itself OR cross-cutting infra changed.
+  # ---------------------------------------------------------------------------
   test:
+    name: test (${{ matrix.service }}, ${{ matrix.enabled }})
     needs: detect-changes
     runs-on: ubuntu-latest
     strategy:
@@ -68,35 +80,139 @@ jobs:
             enabled: ${{ needs.detect-changes.outputs.sync }}
     steps:
       - uses: actions/checkout@v4
-        if: matrix.enabled == 'true'
+        if: matrix.enabled == 'true' || needs.detect-changes.outputs.cross_cutting == 'true'
 
       - name: Set up Python 3.12
-        if: matrix.enabled == 'true'
+        if: matrix.enabled == 'true' || needs.detect-changes.outputs.cross_cutting == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Install dependencies
-        if: matrix.enabled == 'true'
+        if: matrix.enabled == 'true' || needs.detect-changes.outputs.cross_cutting == 'true'
         working-directory: services/${{ matrix.service }}
         run: pip install -r requirements.txt
 
-      - name: Run tests with coverage
-        if: matrix.enabled == 'true'
+      - name: Run unit tests with coverage
+        if: matrix.enabled == 'true' || needs.detect-changes.outputs.cross_cutting == 'true'
         working-directory: services/${{ matrix.service }}
         run: python -m pytest tests/ -v --cov=. --cov-report=xml --cov-report=term-missing --cov-fail-under=60
 
       - name: Upload coverage report
-        if: matrix.enabled == 'true'
+        if: matrix.enabled == 'true' || needs.detect-changes.outputs.cross_cutting == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ matrix.service }}
           path: services/${{ matrix.service }}/coverage.xml
           retention-days: 14
 
+  # ---------------------------------------------------------------------------
+  # Layer 2 — seed-data integrity + smoke tests
+  # Always runs when shared/, tests/, or ANY service changes.
+  # Validates: shared/test_data.py correctness, health of all 4 ASGI clients,
+  # auth flows, basic CRUD under real org scoping.
+  # ---------------------------------------------------------------------------
+  test-smoke:
+    name: smoke tests (cross-service)
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install shared deps (superset of all service requirements)
+        run: |
+          pip install \
+            fastapi uvicorn sqlalchemy aiosqlite httpx pytest pytest-asyncio \
+            anyio python-jose[cryptography] bcrypt pydantic pydantic-settings \
+            fakeredis greenlet
+
+      - name: Install per-service deps (for ASGI import)
+        run: |
+          for svc in auth-service user-service transaction-service ledger-service; do
+            pip install -r services/$svc/requirements.txt --quiet
+          done
+
+      - name: Run smoke tests
+        run: python -m pytest tests/smoke/ -v --tb=short
+
+  # ---------------------------------------------------------------------------
+  # Layer 3 — regression tests (data isolation, business rules, edge cases)
+  # Runs on every PR. Catches cross-service data integrity breaks.
+  # ---------------------------------------------------------------------------
+  test-regression:
+    name: regression tests (data integrity)
+    needs: [detect-changes, test-smoke]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: |
+          for svc in auth-service user-service transaction-service ledger-service; do
+            pip install -r services/$svc/requirements.txt --quiet
+          done
+
+      - name: Run regression tests
+        run: python -m pytest tests/regression/ -v --tb=short
+
+  # ---------------------------------------------------------------------------
+  # Layer 4 — schema consistency gate
+  # Validates that shared/test_data.py covers every NOT NULL column on seeded
+  # tables. Catches the "org_id not in seed data" class of failure at PR time.
+  # ---------------------------------------------------------------------------
+  test-schema-consistency:
+    name: schema consistency (seed data)
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install sqlalchemy aiosqlite greenlet python-jose[cryptography]
+
+      - name: Validate seed data completeness
+        run: python tests/validate_seed_schema.py
+
+  # ---------------------------------------------------------------------------
+  # Sprint closure gate — all layers must pass before this succeeds.
+  # A PR cannot be merged until every layer is green.
+  # ---------------------------------------------------------------------------
+  all-tests-passed:
+    name: all gates passed
+    needs: [test, test-smoke, test-regression, test-schema-consistency]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check all jobs succeeded
+        run: |
+          results="${{ needs.test.result }} ${{ needs.test-smoke.result }} ${{ needs.test-regression.result }} ${{ needs.test-schema-consistency.result }}"
+          echo "Job results: $results"
+          for result in $results; do
+            if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
+              echo "A required gate failed: $result"
+              exit 1
+            fi
+          done
+          echo "All gates passed."
+
   notify-failure:
     name: Slack alert on failure
-    needs: [detect-changes, test]
+    needs: [test, test-smoke, test-regression, test-schema-consistency]
     if: failure()
     runs-on: ubuntu-latest
     steps:

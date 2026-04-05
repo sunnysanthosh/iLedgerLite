@@ -260,22 +260,65 @@ git push && git push --tags
 
 ## Sprint Workflow
 
-At the **start** of each sprint:
-- Create a sprint branch from `main` (see Branching Strategy above)
-- Read `MEMORY.md` for resume context (next sprint scope, endpoints, conventions)
-- Read `ROADMAP.md` for the sprint checklist
-- Read the relevant skeleton service to understand current state
+### Sprint start checklist
+- [ ] Create sprint branch from `main`: `git checkout -b sprint-<N>/<description>`
+- [ ] Read `MEMORY.md` for resume context
+- [ ] Read `ROADMAP.md` for the sprint checklist
+- [ ] If the sprint touches the database schema, read `docs/developer/schema-change-checklist.md` now — work through it as you implement, not after
 
-At the **end** of each sprint:
-- Run all service test suites to catch regressions
-- Update `docs/SPRINT-LOG.md` with delivered endpoints, test counts, key decisions
-- Update `docs/API.md` with full endpoint documentation for the new service
-- Update `ROADMAP.md` current state table and mark the sprint as DONE
-- Update `CLAUDE.md` project status line
-- Save resume context to `MEMORY.md` — include: next sprint scope, planned endpoints, service conventions, any new patterns learned
-- Merge sprint branch to `main` and tag (see Branching Strategy above)
+### Sprint implementation — schema change rules
+Any sprint that adds/changes a column or table **must** update these in order:
 
-**Parallel activities:** Documentation writing can run as a background agent while implementing code and tests.
+1. `database/schema.sql` (source of truth)
+2. Alembic migration under `database/migrations/versions/`
+3. ORM models in **every service** that reads the table
+4. `shared/test_data.py` — add the column to every affected dict
+5. `tests/conftest.py` — add the column to every ORM constructor call
+6. Per-service `tests/conftest.py` — update fixture seed helpers
+7. Run `python tests/validate_seed_schema.py` before committing
+
+### Sprint closure — four mandatory gates (must all be green before merge)
+
+```bash
+# Gate 1 — seed data structural integrity (catches missing NOT NULL fields, broken FKs)
+make test-schema
+
+# Gate 2 — service unit tests (catches logic errors, ORM mismatches, 60% coverage)
+make test-all
+
+# Gate 3 — smoke tests (catches ASGI client failures, health, auth, basic CRUD)
+make test-smoke
+
+# Gate 4 — regression tests (catches data isolation, cross-service business rules)
+make test-regression
+
+# Run all four in one command:
+make test-e2e
+```
+
+All four must exit 0. A green service unit suite alone is not sufficient for merge.
+
+### Sprint closure — documentation and tagging
+- [ ] `docs/SPRINT-LOG.md` — delivered endpoints, test counts, key decisions
+- [ ] `docs/API.md` — new/changed endpoint documentation
+- [ ] `ROADMAP.md` — mark sprint DONE, update test count in status table
+- [ ] `CLAUDE.md` — update project status line and migration count
+- [ ] `MEMORY.md` — save next sprint scope, patterns learned, deferred items
+- [ ] Open PR, wait for CI (all 4 layers), merge, tag: `git tag sprint-<N>-done`
+
+**Parallel activities:** Documentation can run as a background agent while tests run.
+
+### CI gate map (what each layer catches)
+
+| Make target | CI job | Catches |
+|---|---|---|
+| `make test-schema` | `test-schema-consistency` | Missing NOT NULL fields in seed data; broken FK references |
+| `make test-all` | `test` (matrix) | Service logic, ORM errors, 60% coverage gate |
+| `make test-smoke` | `test-smoke` | ASGI health, auth flows, org scoping in all 4 services |
+| `make test-regression` | `test-regression` | Data isolation, account balances, inactive user lockout, edge cases |
+| _(all of the above)_ | `all-tests-passed` | Hard merge gate — PR cannot merge until every layer is green |
+
+Cross-cutting changes (`shared/`, `tests/`, `database/`) automatically trigger all service unit tests in addition to all upper layers.
 
 ## Planning Documents
 
