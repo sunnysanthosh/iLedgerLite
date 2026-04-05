@@ -1,14 +1,16 @@
 import uuid
 
 from db import get_db
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from models.user import User
+from schemas.audit import AuditLogEntry, AuditLogList
 from schemas.org import MemberInvite, MemberResponse, MemberRoleUpdate, OrgCreate, OrgListItem, OrgResponse
 from services.org_service import (
     change_member_role,
     create_org,
     get_org,
     invite_member,
+    list_audit_log,
     list_members,
     list_orgs,
     remove_member,
@@ -83,3 +85,20 @@ async def remove(
     db: AsyncSession = Depends(get_db),
 ):
     await remove_member(org_id, target_user_id, current_user, db)
+
+
+@router.get("/{org_id}/audit", response_model=AuditLogList)
+async def get_audit_log(
+    org_id: uuid.UUID,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    entries, total = await list_audit_log(org_id, current_user, db, skip=skip, limit=limit)
+    return AuditLogList(
+        items=[AuditLogEntry.model_validate(e) for e in entries],
+        total=total,
+        skip=skip,
+        limit=limit,
+    )

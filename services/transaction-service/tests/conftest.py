@@ -113,6 +113,37 @@ def auth_headers(seed_user: User) -> dict:
 
 
 @pytest.fixture
+async def read_only_headers(db_session: AsyncSession, seed_user: User) -> dict:
+    """A second user with read_only membership in seed_user's org."""
+    ro_user = User(
+        id=uuid.uuid4(),
+        email="readonly@example.com",
+        password_hash="not_used",
+        full_name="Read Only User",
+        phone=None,
+        is_active=True,
+    )
+    db_session.add(ro_user)
+    await db_session.flush()
+
+    ro_membership = OrgMembership(
+        id=uuid.uuid4(),
+        org_id=seed_user._org_id,  # type: ignore[attr-defined]
+        user_id=ro_user.id,
+        role="read_only",
+        is_active=True,
+    )
+    db_session.add(ro_membership)
+    await db_session.flush()
+
+    token = make_access_token(str(ro_user.id))
+    return {
+        "Authorization": f"Bearer {token}",
+        "X-Org-ID": str(seed_user._org_id),  # type: ignore[attr-defined]
+    }
+
+
+@pytest.fixture
 async def seed_account(db_session: AsyncSession, seed_user: User) -> Account:
     account = Account(
         id=uuid.uuid4(),

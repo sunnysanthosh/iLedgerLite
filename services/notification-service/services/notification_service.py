@@ -127,3 +127,28 @@ async def create_reminder(
     db.add(notification)
     await db.flush()
     return notification
+
+
+async def create_system_notification(
+    user_id: uuid.UUID,
+    org_id: uuid.UUID,
+    title: str,
+    message: str,
+    notification_type: str = "system",
+    related_entity_id: uuid.UUID | None = None,
+    db: AsyncSession = None,
+) -> Notification:
+    """Create a system/internal notification (e.g., org invite). No org-membership check."""
+    notification = Notification(
+        id=uuid.uuid4(),
+        user_id=user_id,
+        org_id=org_id,
+        type=notification_type,
+        title=title,
+        message=message,
+        related_entity_id=related_entity_id,
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(notification)
+    await db.flush()
+    return notification

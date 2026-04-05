@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iLedgerLite Iconography Preview</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #1B2D4B;
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            margin-bottom: 10px;
+        }
+        p.subtitle {
+            color: #2B6BAE;
+            margin-bottom: 40px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 30px;
+            width: 100%;
+            max-width: 1000px;
+        }
+        .icon-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .icon-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+        }
+        .icon-container {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .icon-container svg {
+            width: 100%;
+            height: 100%;
+        }
+        .icon-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: #1B2D4B;
+        }
+        .color-palette {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 50px;
+        }
+        .color-circle {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .color-label {
+            text-align: center;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>iLedgerLite Iconography</h1>
+    <p class="subtitle">Based on the "iL" brand style with the Navy / Orange / Medium Blue palette.</p>
+
+    <div class="color-palette">
+        <div>
+            <div class="color-circle" style="background-color: #1B2D4B;"></div>
+            <div class="color-label">Navy</div>
+        </div>
+        <div>
+            <div class="color-circle" style="background-color: #E68A2E;"></div>
+            <div class="color-label">Orange</div>
+        </div>
+        <div>
+            <div class="color-circle" style="background-color: #2B6BAE;"></div>
+            <div class="color-label">Blue</div>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="icon-card">
+            <div class="icon-container">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <g transform="skewX(-15)">
+                    <path d="M7 17L17 7M17 7H9M17 7V15" stroke="#2B6BAE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M5 19H19" stroke="#E68A2E" stroke-width="2" stroke-linecap="round"/>
+                    <circle cx="12" cy="12" r="1.5" fill="#1B2D4B"/>
+                  </g>
+                </svg>
+            </div>
+            <div class="icon-name">Income</div>
+        </div>
+        
+        <div class="icon-card">
+            <div class="icon-container">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <g transform="skewX(-15)">
+                    <path d="M17 7L7 17M7 17H15M7 17V9" stroke="#1B2D4B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M5 5H19" stroke="#E68A2E" stroke-width="2" stroke-linecap="round"/>
+                    <rect x="15" y="15" width="2" height="2" fill="#2B6BAE"/>
+                  </g>
+                </svg>
+            </div>
+            <div class="icon-name">Expense</div>
+        </div>
+
+        <div class="icon-card">
+            <div class="icon-container">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <g transform="skewX(-15)">
+                    <path d="M3 21H21M3 10L12 3L21 10M5 10V18M19 10V18M9 10V18M15 10V18" stroke="#1B2D4B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M7 18H17" stroke="#E68A2E" stroke-width="2"/>
+                    <circle cx="12" cy="7" r="1" fill="#2B6BAE"/>
+                  </g>
+                </svg>
+            </div>
+            <div class="icon-name">Account</div>
+        </div>
+
+        <div class="icon-card">
+            <div class="icon-container">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <g transform="skewX(-15)">
+                    <rect x="3" y="11" width="4" height="10" rx="1" fill="#1B2D4B"/>
+                    <rect x="10" y="7" width="4" height="14" rx="1" fill="#1B2D4B"/>
+                    <rect x="17" y="3" width="4" height="18" rx="1" fill="#E68A2E"/>
+                    <path d="M3 22H21" stroke="#2B6BAE" stroke-width="1"/>
+                  </g>
+                </svg>
+            </div>
+            <div class="icon-name">Report</div>
+        </div>
+
+        <div class="icon-card">
+            <div class="icon-container">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <g transform="skewX(-15)">
+                    <path d="M4 12C4 7.58172 7.58172 4 12 4C14.5 4 16.7332 5.14725 18.2 6.913" stroke="#1B2D4B" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M20 12C20 16.4183 16.4183 20 12 20C9.5 20 7.26679 18.8528 5.8 17.087" stroke="#E68A2E" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M19 3V7H15" stroke="#2B6BAE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M5 21V17H9" stroke="#E68A2E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </g>
+                </svg>
+            </div>
+            <div class="icon-name">Sync</div>
+        </div>
+
+        <div class="icon-card">
+            <div class="icon-container">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <g transform="skewX(-15)">
+                    <path d="M18 8C18 4.68629 15.3137 2 12 2C8.68629 2 6 4.68629 6 8C6 14 3 17 3 17H21C21 17 18 14 18 8Z" stroke="#1B2D4B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M10.3 21C10.7 21.6 11.3 22 12 22C12.7 22 13.3 21.6 13.7 21" stroke="#E68A2E" stroke-width="2" stroke-linecap="round"/>
+                    <circle cx="12" cy="7" r="1" fill="#2B6BAE"/>
+                  </g>
+                </svg>
+            </div>
+            <div class="icon-name">Notification</div>
+        </div>
+
+        <div class="icon-card">
+            <div class="icon-container">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <g transform="skewX(-15)">
+                    <circle cx="12" cy="12" r="3" stroke="#1B2D4B" stroke-width="2"/>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="#2B6BAE" stroke-width="2"/>
+                    <path d="M11 11L13 13" stroke="#E68A2E" stroke-width="1"/>
+                  </g>
+                </svg>
+            </div>
+            <div class="icon-name">Settings</div>
+        </div>
+
+        <div class="icon-card">
+            <div class="icon-container">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <g transform="skewX(-15)">
+                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke="#E68A2E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="12" cy="12" r="2" fill="#1B2D4B"/>
+                    <path d="M12 4V6M12 18V20M4 12H6M18 12H20" stroke="#2B6BAE" stroke-width="1.5" stroke-linecap="round"/>
+                  </g>
+                </svg>
+            </div>
+            <div class="icon-name">AI</div>
+        </div>
+    </div>
+
+</body>
+</html>

@@ -13,3 +13,7 @@ node_modules/
 
 # Vercel
 .vercel
+
+# Build artifacts
+tsconfig.tsbuildinfo
+package-lock.json

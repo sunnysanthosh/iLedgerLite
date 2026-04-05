@@ -40,3 +40,12 @@ class ReminderRequest(BaseModel):
 class MarkReadResponse(BaseModel):
     id: uuid.UUID
     is_read: bool
+
+
+class InternalNotificationCreate(BaseModel):
+    user_id: uuid.UUID
+    org_id: uuid.UUID
+    type: str = "system"
+    title: str
+    message: str
+    related_entity_id: uuid.UUID | None = None

@@ -11,7 +11,7 @@ from services.account_service import (
     list_accounts,
     update_account,
 )
-from services.security import get_org_member
+from services.security import get_org_member, get_write_member
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/accounts", tags=["accounts"])
@@ -20,7 +20,7 @@ router = APIRouter(prefix="/accounts", tags=["accounts"])
 @router.post("", response_model=AccountResponse, status_code=status.HTTP_201_CREATED)
 async def create(
     data: AccountCreate,
-    membership: OrgMembership = Depends(get_org_member),
+    membership: OrgMembership = Depends(get_write_member),
     db: AsyncSession = Depends(get_db),
 ):
     return await create_account(membership.user_id, membership.org_id, data, db)
@@ -47,7 +47,7 @@ async def get_one(
 async def update(
     account_id: uuid.UUID,
     data: AccountUpdate,
-    membership: OrgMembership = Depends(get_org_member),
+    membership: OrgMembership = Depends(get_write_member),
     db: AsyncSession = Depends(get_db),
 ):
     return await update_account(account_id, membership.org_id, data, db)
@@ -56,7 +56,7 @@ async def update(
 @router.delete("/{account_id}", status_code=status.HTTP_200_OK)
 async def deactivate(
     account_id: uuid.UUID,
-    membership: OrgMembership = Depends(get_org_member),
+    membership: OrgMembership = Depends(get_write_member),
     db: AsyncSession = Depends(get_db),
 ):
     await deactivate_account(account_id, membership.org_id, db)

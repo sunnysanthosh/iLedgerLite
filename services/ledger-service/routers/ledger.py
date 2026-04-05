@@ -6,7 +6,7 @@ from models.org import OrgMembership
 from schemas.ledger import LedgerEntryCreate, LedgerEntryResponse, LedgerEntryUpdate, LedgerSummary
 from services.customer_service import get_customer
 from services.ledger_service import create_ledger_entry, get_ledger_history, update_ledger_entry
-from services.security import get_org_member
+from services.security import get_org_member, get_write_member
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(tags=["ledger"])
@@ -15,7 +15,7 @@ router = APIRouter(tags=["ledger"])
 @router.post("/ledger-entry", response_model=LedgerEntryResponse, status_code=201)
 async def create_ledger_entry_endpoint(
     data: LedgerEntryCreate,
-    membership: OrgMembership = Depends(get_org_member),
+    membership: OrgMembership = Depends(get_write_member),
     db: AsyncSession = Depends(get_db),
 ):
     return await create_ledger_entry(membership.user_id, membership.org_id, data, db)
@@ -50,7 +50,7 @@ async def get_ledger_history_endpoint(
 async def update_ledger_entry_endpoint(
     entry_id: uuid.UUID,
     data: LedgerEntryUpdate,
-    membership: OrgMembership = Depends(get_org_member),
+    membership: OrgMembership = Depends(get_write_member),
     db: AsyncSession = Depends(get_db),
 ):
     return await update_ledger_entry(entry_id, membership.org_id, data, db)

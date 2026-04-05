@@ -11,7 +11,7 @@ from schemas.customer import (
     CustomerWithBalance,
 )
 from services.customer_service import create_customer, get_customer, list_customers, update_customer
-from services.security import get_org_member
+from services.security import get_org_member, get_write_member
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(tags=["customers"])
@@ -20,7 +20,7 @@ router = APIRouter(tags=["customers"])
 @router.post("/customers", response_model=CustomerResponse, status_code=201)
 async def create_customer_endpoint(
     data: CustomerCreate,
-    membership: OrgMembership = Depends(get_org_member),
+    membership: OrgMembership = Depends(get_write_member),
     db: AsyncSession = Depends(get_db),
 ):
     return await create_customer(membership.user_id, membership.org_id, data, db)
@@ -79,7 +79,7 @@ async def get_customer_endpoint(
 async def update_customer_endpoint(
     customer_id: uuid.UUID,
     data: CustomerUpdate,
-    membership: OrgMembership = Depends(get_org_member),
+    membership: OrgMembership = Depends(get_write_member),
     db: AsyncSession = Depends(get_db),
 ):
     return await update_customer(customer_id, membership.org_id, data, db)

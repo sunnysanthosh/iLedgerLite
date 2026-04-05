@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 LedgerLite is an **early-stage fintech SaaS product**. Backend microservices are under active development. Planning documents (PRDs, investor briefs, architecture blueprints) are at the root level. See `ROADMAP.md` for implementation status.
 
-**Completed:** auth-service, user-service, transaction-service, ledger-service, report-service, notification-service, ai-service, sync-service, Alembic migrations (5 migrations), CI/CD (test + lint + build + deploy + coverage gate), Flutter mobile app (auth, dashboard, transactions, accounts, ledger, reports, settings, offline sync, org selection — 44+ Dart files), Kubernetes manifests (Kustomize base + staging/production overlays — 23 files), Next.js web dashboard (6 tabs + admin infra tab + org settings), Terraform IaC for GCP (6 modules — vpc, gke, cloudsql, memorystore, storage, iam), GCP staging live (all 8 services), multi-user organisations (full stack: Sprint 14 backend + Sprint 15 UI — OrgSwitcher, X-Org-ID header, OrgSelectionScreen, org scoping for all 8 services)
-**In Progress:** Sprint 16 — org_id NOT NULL constraints, invitation emails, audit log
-**Not Started:** Sprint 16 — granular org-level permissions; audit log table
+**Completed:** auth-service, user-service, transaction-service, ledger-service, report-service, notification-service, ai-service, sync-service, Alembic migrations (7 migrations), CI/CD (test + lint + build + deploy + coverage gate), Flutter mobile app (auth, dashboard, transactions, accounts, ledger, reports, settings, offline sync, org selection — 44+ Dart files), Kubernetes manifests (Kustomize base + staging/production overlays — 23 files), Next.js web dashboard (6 tabs + admin infra tab + org settings), Terraform IaC for GCP (6 modules — vpc, gke, cloudsql, memorystore, storage, iam), GCP staging live (all 8 services), multi-user organisations (full stack: Sprint 14 backend + Sprint 15 UI — OrgSwitcher, X-Org-ID header, OrgSelectionScreen, org scoping for all 8 services), org hardening (Sprint 16 — NOT NULL constraints, read_only enforcement, audit log, invite notifications — 171 tests)
+**In Progress:** Sprint 17 planning
+**Not Started:** Sprint 17 — granular org permissions, email delivery (SMTP/SendGrid), org deletion/transfer
 
 ## Python Environment
 

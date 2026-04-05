@@ -4,9 +4,10 @@ class AppColors {
   AppColors._();
 
   // Brand
-  static const Color primary = Color(0xFF1B5E20);
-  static const Color primaryLight = Color(0xFF4CAF50);
-  static const Color primaryDark = Color(0xFF0D3311);
+  static const Color primary = Color(0xFF1B2D4B); // Navy
+  static const Color primaryLight = Color(0xFF2B6BAE); // Medium Blue
+  static const Color primaryDark = Color(0xFF0F1A2C); // Darker Navy
+  static const Color accent = Color(0xFFE68A2E); // Orange
 
   // Semantic
   static const Color income = Color(0xFF2E7D32);

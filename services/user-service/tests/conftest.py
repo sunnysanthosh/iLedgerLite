@@ -6,6 +6,7 @@ import pytest
 from config import settings
 from httpx import ASGITransport, AsyncClient
 from jose import jwt
+from models.audit_log import AuditLog  # noqa: F401 — register with Base
 from models.base import Base
 from models.user import User
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
