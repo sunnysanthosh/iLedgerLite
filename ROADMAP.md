@@ -5,19 +5,19 @@
 
 ---
 
-## Current State — Sprint 15 Done ✅ (tagged `sprint-15-done`)
+## Current State — Sprint 16 Done ✅ (tagged `sprint-16-done`)
 
 | Component | Status | Details |
 |---|---|---|
 | **auth-service** | ✅ Done | 4 endpoints, 15 tests; org membership eager-load in /me |
-| **user-service** | ✅ Done | 12 endpoints (5 user + 7 org CRUD), 30 tests |
-| **transaction-service** | ✅ Done | 12 endpoints, 27 tests; org_id scoped |
-| **ledger-service** | ✅ Done | 7 endpoints, 26 tests; org_id scoped |
-| **report-service** | ✅ Done | 5 endpoints, 18 tests; org_id scoped |
-| **notification-service** | ✅ Done | 3 endpoints, 12 tests; org_id scoped |
-| **ai-service** | ✅ Done | 3 endpoints, 16 tests; org_id scoped |
-| **sync-service** | ✅ Done | 3 endpoints, 14 tests; org_id scoped |
-| **database** | ✅ Done | schema.sql, 5 Alembic migrations, 29 seed categories, organisations + org_memberships tables |
+| **user-service** | ✅ Done | 14 endpoints (5 user + 7 org CRUD + 1 audit log + 1 internal notify), 34 tests |
+| **transaction-service** | ✅ Done | 12 endpoints, 32 tests; org_id NOT NULL; read_only enforcement |
+| **ledger-service** | ✅ Done | 7 endpoints, 30 tests; org_id NOT NULL; read_only enforcement |
+| **report-service** | ✅ Done | 5 endpoints, 18 tests; org_id NOT NULL |
+| **notification-service** | ✅ Done | 4 endpoints, 12 tests; org_id NOT NULL; internal invite endpoint |
+| **ai-service** | ✅ Done | 3 endpoints, 16 tests; org_id NOT NULL |
+| **sync-service** | ✅ Done | 3 endpoints, 14 tests; org_id NOT NULL; read_only enforcement |
+| **database** | ✅ Done | schema.sql, 7 Alembic migrations, organisations + org_memberships + audit_log tables; org_id NOT NULL on 5 tables |
 | **CI/CD** | ✅ Done | test + lint + build (GHCR + Trivy) + deploy (smoke + rollback) + terraform-lint + 60% coverage gate + Slack alerts |
 | **apps/mobile-app** | ✅ Done | Flutter — 6 screens, 43 Dart files, offline sync, cert pinning, org selection + X-Org-ID |
 | **apps/web-dashboard** | ✅ Done | Next.js 14 — 6 tabs + admin infra + org settings tab; OrgSwitcher; X-Org-ID header |
@@ -25,8 +25,9 @@
 | **infrastructure/terraform** | ✅ Done | 6 GCP modules (VPC, GKE, CloudSQL, Memorystore, Storage, IAM) |
 | **GCP staging** | ✅ Live | All 8 services running in `ledgerlite-staging`, 5 migrations applied |
 | **multi-user orgs** | ✅ Done | Full stack: backend org CRUD + org_id scoping (all 8 services) + web OrgSwitcher + Flutter OrgSelectionScreen |
+| **org hardening** | ✅ Done | NOT NULL constraints, read_only enforcement, audit log, invite notifications |
 
-**158 tests passing. GCP staging live. main at `sprint-14-done` (`abf6392`). PR #22 pending merge.**
+**171 tests passing. GCP staging live. main at `sprint-15-done`. PR #23 open.**
 
 ---
 

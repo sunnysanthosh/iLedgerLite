@@ -759,3 +759,57 @@ alembic history
 - `org_id NOT NULL` constraints (after all services verified in production)
 - Org invitation email notifications
 - Audit log for org actions
+
+---
+
+## Sprint 16 — Org Hardening: NOT NULL Constraints, read_only Enforcement, Audit Log, Invite Notifications (Completed — `sprint-16-done`)
+
+**Goal:** Harden the multi-user org feature: enforce NOT NULL on org_id across all data tables, block read_only members from mutating endpoints, persist an audit trail for org governance actions, and deliver in-app invite notifications.
+
+**Delivered:**
+
+### Database
+- **Migration 006** (`006_org_id_not_null.py`): `org_id` changed from nullable → NOT NULL on `accounts`, `transactions`, `customers`, `ledger_entries`, `notifications`. `categories` intentionally excluded — system categories are org-agnostic (`org_id IS NULL`).
+- **Migration 007** (`007_audit_log.py`): creates `audit_log` table with `org_id`, `actor_id`, `action`, `entity_type`, `entity_id`, `details` (JSON text), `created_at`; indexes on `org_id` and `actor_id`.
+- `database/schema.sql` updated to reflect both migrations.
+
+### ORM Tightening
+- `org_id: Mapped[uuid.UUID | None]` → `Mapped[uuid.UUID]` (nullable=False) across 14 model files in 6 services: transaction-service (account, transaction), ledger-service (customer, ledger_entry), report-service (account, transaction, customer, ledger_entry), ai-service (transaction), sync-service (transaction, ledger_entry), notification-service (notification, customer, ledger_entry).
+
+### read_only Role Enforcement
+- `get_write_member` dependency added to `services/security.py` in transaction, ledger, notification, and sync services. Chains off `get_org_member`; raises HTTP 403 if `membership.role == "read_only"`.
+- Applied to all mutating endpoints (POST/PUT/DELETE) in all 4 services; GET endpoints keep `get_org_member`.
+- `test_read_only.py` added to transaction-service (5 tests) and ledger-service (4 tests); `read_only_headers` fixture in both conftest files.
+
+### Audit Log
+- `services/user-service/models/audit_log.py` (NEW): `AuditLog` ORM model.
+- `services/user-service/schemas/audit.py` (NEW): `AuditLogEntry` + `AuditLogList(items, total, skip, limit)`.
+- `org_service.py`: `_audit()` helper; called on `member_invited`, `role_changed`, `member_removed`.
+- `_require_membership()` updated with optional `required_role` param for owner-only gating.
+- `list_audit_log()` service function: owner-only, paginated, ordered by `created_at DESC`.
+- `GET /organisations/{org_id}/audit` endpoint (owners only).
+- `test_audit_log.py` (4 tests): requires auth, audit after invite, audit after role change, non-owner gets 403.
+
+### Invite Notifications
+- notification-service: `InternalNotificationCreate` schema; `create_system_notification()` function; `POST /notifications/internal` endpoint (no auth, hidden from OpenAPI docs — internal only).
+- user-service: `notification_service_url` config (default `http://localhost:8007`); `_notify_invite()` helper using `httpx`; called as `asyncio.create_task()` after audit log in `invite_member` — fire-and-forget, failures logged but never propagated.
+
+**Endpoints added:**
+
+| Service | Method | Path | Status | Description |
+|---|---|---|---|---|
+| user-service | GET | /organisations/{org_id}/audit | 200 | Owner-only paginated audit log |
+| notification-service | POST | /notifications/internal | 201 | Internal invite notification (no auth) |
+
+**Tests:** 171 passing across all 8 services (34 user-service, 32 transaction, 30 ledger, 18 report, 15 auth, 16 ai, 14 sync, 12 notification). Lint clean.
+
+**Key Decisions:**
+- `categories.org_id` stays nullable — system categories (`org_id IS NULL`) apply across all orgs; enforcing NOT NULL would require creating per-org copies of all system categories.
+- `_notify_invite()` is fire-and-forget: the invite succeeds even if notification-service is down; failure is logged at WARNING level.
+- Internal notification endpoint has `include_in_schema=False` — not exposed in public OpenAPI docs; not authenticated (trusted internal network only).
+- `SyncLog` and `mark_as_read` remain user-scoped (device tracking and notification ownership are per-user, not per-org).
+
+**Deferred to Sprint 17:**
+- Granular org-level permissions (beyond owner/member/read_only)
+- Email delivery for invitations (SMTP / SendGrid integration)
+- Org deletion / transfer ownership flows
