@@ -42,6 +42,8 @@ class AppTheme {
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             minimumSize: const Size(double.infinity, 52),
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
@@ -54,6 +56,8 @@ class AppTheme {
         floatingActionButtonTheme: const FloatingActionButtonThemeData(
           elevation: 2,
           shape: CircleBorder(),
+          backgroundColor: AppColors.accent,
+          foregroundColor: Colors.white,
         ),
       );
 
@@ -84,6 +88,8 @@ class AppTheme {
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             minimumSize: const Size(double.infinity, 52),
+            backgroundColor: AppColors.primaryLight,
+            foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
@@ -96,6 +102,8 @@ class AppTheme {
         floatingActionButtonTheme: const FloatingActionButtonThemeData(
           elevation: 2,
           shape: CircleBorder(),
+          backgroundColor: AppColors.accent,
+          foregroundColor: Colors.white,
         ),
       );
 }
