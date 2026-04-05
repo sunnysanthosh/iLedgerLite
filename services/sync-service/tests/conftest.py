@@ -16,6 +16,7 @@ from config import settings
 from models.account import Account
 from models.base import Base
 from models.customer import Customer
+from models.org import Organisation, OrgMembership  # noqa: F401 — register with Base
 from models.sync_log import SyncLog  # noqa: F401 — register with Base
 from models.transaction import Transaction
 from models.user import User
@@ -84,6 +85,28 @@ async def seed_user(db_session: AsyncSession) -> User:
     )
     db_session.add(user)
     await db_session.flush()
+
+    org = Organisation(
+        id=_uuid_mod.uuid4(),
+        name="Sync Test User's Personal",
+        owner_id=user.id,
+        is_personal=True,
+        is_active=True,
+    )
+    db_session.add(org)
+    await db_session.flush()
+
+    membership = OrgMembership(
+        id=_uuid_mod.uuid4(),
+        org_id=org.id,
+        user_id=user.id,
+        role="owner",
+        is_active=True,
+    )
+    db_session.add(membership)
+    await db_session.flush()
+
+    user._org_id = org.id  # type: ignore[attr-defined]  # transient Python attr
     await db_session.refresh(user)
     return user
 
@@ -91,7 +114,10 @@ async def seed_user(db_session: AsyncSession) -> User:
 @pytest.fixture
 def auth_headers(seed_user: User) -> dict:
     token = make_access_token(str(seed_user.id))
-    return {"Authorization": f"Bearer {token}"}
+    return {
+        "Authorization": f"Bearer {token}",
+        "X-Org-ID": str(seed_user._org_id),  # type: ignore[attr-defined]
+    }
 
 
 @pytest.fixture
@@ -133,10 +159,12 @@ async def seed_server_transactions(
 ) -> list[Transaction]:
     """Create server-side transactions for pull tests."""
     now = datetime.now(timezone.utc)
+    org_id = seed_user._org_id  # type: ignore[attr-defined]
     txns = [
         Transaction(
             id=_uuid_mod.uuid4(),
             user_id=seed_user.id,
+            org_id=org_id,
             account_id=seed_account.id,
             type="expense",
             amount=Decimal("500.00"),
@@ -146,6 +174,7 @@ async def seed_server_transactions(
         Transaction(
             id=_uuid_mod.uuid4(),
             user_id=seed_user.id,
+            org_id=org_id,
             account_id=seed_account.id,
             type="income",
             amount=Decimal("10000.00"),

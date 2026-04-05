@@ -18,6 +18,7 @@ class Transaction(Base):
     category_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True
     )
+    org_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
     type: Mapped[str] = mapped_column(String(10), nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)

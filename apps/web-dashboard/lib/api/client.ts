@@ -16,15 +16,17 @@ export const SERVICE_URLS = {
 function makeClient(baseURL: string): AxiosInstance {
   const instance = axios.create({ baseURL, timeout: 10_000 })
 
-  // ── Request: attach access token ─────────────────────────────────────────
+  // ── Request: attach access token + active org ────────────────────────────
   instance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
     // Dynamic import to avoid circular deps — store is available client-side only
     if (typeof window !== "undefined") {
       const raw = localStorage.getItem("ledgerlite-auth")
       if (raw) {
-        const state = JSON.parse(raw) as { state?: { accessToken?: string } }
+        const state = JSON.parse(raw) as { state?: { accessToken?: string; currentOrgId?: string } }
         const token = state?.state?.accessToken
         if (token) config.headers.Authorization = `Bearer ${token}`
+        const orgId = state?.state?.currentOrgId
+        if (orgId) config.headers["X-Org-ID"] = orgId
       }
     }
     return config

@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 async def push_changes(
     db: AsyncSession,
     user_id: uuid.UUID,
+    org_id: uuid.UUID,
     device_id: str,
     transactions: list[dict],
     ledger_entries: list[dict],
@@ -26,7 +27,7 @@ async def push_changes(
         existing = await db.execute(
             select(Transaction).where(
                 Transaction.id == txn_data["id"],
-                Transaction.user_id == user_id,
+                Transaction.org_id == org_id,
             )
         )
         existing_txn = existing.scalars().first()
@@ -41,6 +42,7 @@ async def push_changes(
             new_txn = Transaction(
                 id=txn_data["id"],
                 user_id=user_id,
+                org_id=org_id,
                 account_id=txn_data["account_id"],
                 category_id=txn_data.get("category_id"),
                 type=txn_data["type"],
@@ -56,7 +58,7 @@ async def push_changes(
         existing = await db.execute(
             select(LedgerEntry).where(
                 LedgerEntry.id == entry_data["id"],
-                LedgerEntry.user_id == user_id,
+                LedgerEntry.org_id == org_id,
             )
         )
         existing_entry = existing.scalars().first()
@@ -71,6 +73,7 @@ async def push_changes(
             new_entry = LedgerEntry(
                 id=entry_data["id"],
                 user_id=user_id,
+                org_id=org_id,
                 customer_id=entry_data["customer_id"],
                 type=entry_data["type"],
                 amount=entry_data["amount"],
@@ -83,7 +86,7 @@ async def push_changes(
 
     await db.flush()
 
-    # Record sync log
+    # Record sync log (per user+device, not per org)
     sync_log = SyncLog(
         id=uuid.uuid4(),
         user_id=user_id,
@@ -106,12 +109,13 @@ async def push_changes(
 async def pull_changes(
     db: AsyncSession,
     user_id: uuid.UUID,
+    org_id: uuid.UUID,
     device_id: str,
     since: datetime | None,
 ) -> dict:
     """Return server changes since the given timestamp."""
     # Transactions modified since last sync
-    txn_query = select(Transaction).where(Transaction.user_id == user_id)
+    txn_query = select(Transaction).where(Transaction.org_id == org_id)
     if since:
         txn_query = txn_query.where(Transaction.updated_at > since)
     txn_query = txn_query.order_by(Transaction.updated_at)
@@ -120,7 +124,7 @@ async def pull_changes(
     transactions = txn_result.scalars().all()
 
     # Ledger entries modified since last sync
-    entry_query = select(LedgerEntry).where(LedgerEntry.user_id == user_id)
+    entry_query = select(LedgerEntry).where(LedgerEntry.org_id == org_id)
     if since:
         entry_query = entry_query.where(LedgerEntry.updated_at > since)
     entry_query = entry_query.order_by(LedgerEntry.updated_at)
@@ -130,7 +134,7 @@ async def pull_changes(
 
     now = datetime.now(timezone.utc)
 
-    # Record sync log
+    # Record sync log (per user+device)
     sync_log = SyncLog(
         id=uuid.uuid4(),
         user_id=user_id,
@@ -153,10 +157,11 @@ async def pull_changes(
 async def get_sync_status(
     db: AsyncSession,
     user_id: uuid.UUID,
+    org_id: uuid.UUID,
     device_id: str,
 ) -> dict:
     """Return last sync info and count of pending changes for this device."""
-    # Find the most recent sync for this device
+    # Find the most recent sync for this device (per user+device)
     result = await db.execute(
         select(SyncLog)
         .where(SyncLog.user_id == user_id, SyncLog.device_id == device_id)
@@ -168,7 +173,7 @@ async def get_sync_status(
     last_synced_at = last_sync.last_synced_at if last_sync else None
     sync_status = last_sync.sync_status if last_sync else "never"
 
-    # Count changes since last sync
+    # Count pending org-scoped changes since last sync
     pending_txn = 0
     pending_ledger = 0
     if last_synced_at:
@@ -176,7 +181,7 @@ async def get_sync_status(
             select(func.count())
             .select_from(Transaction)
             .where(
-                Transaction.user_id == user_id,
+                Transaction.org_id == org_id,
                 Transaction.updated_at > last_synced_at,
             )
         )
@@ -186,7 +191,7 @@ async def get_sync_status(
             select(func.count())
             .select_from(LedgerEntry)
             .where(
-                LedgerEntry.user_id == user_id,
+                LedgerEntry.org_id == org_id,
                 LedgerEntry.updated_at > last_synced_at,
             )
         )

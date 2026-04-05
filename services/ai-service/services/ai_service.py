@@ -90,7 +90,7 @@ KEYWORD_MAP: dict[str, str] = {
 
 async def categorize_transaction(
     db: AsyncSession,
-    user_id: uuid.UUID,
+    org_id: uuid.UUID,
     description: str,
     amount: Decimal,
     txn_type: str,
@@ -114,12 +114,12 @@ async def categorize_transaction(
         else:
             scored = {"Shopping": 0.3, "Food & Dining": 0.2, "Utilities": 0.15}
 
-    # Look up actual category IDs from DB
+    # Look up actual category IDs from DB — org-scoped + system categories
     cat_names = list(scored.keys())
     result = await db.execute(
         select(Category).where(
             Category.name.in_(cat_names),
-            (Category.user_id == user_id) | (Category.user_id.is_(None)),
+            (Category.org_id == org_id) | (Category.org_id.is_(None)),
         )
     )
     categories = {c.name: c for c in result.scalars().all()}
@@ -141,9 +141,9 @@ async def categorize_transaction(
 
 async def get_spending_insights(
     db: AsyncSession,
-    user_id: uuid.UUID,
+    org_id: uuid.UUID,
 ) -> dict:
-    """Compute spending anomalies, trends, and top categories for the user."""
+    """Compute spending anomalies, trends, and top categories for the org."""
     now = datetime.now(timezone.utc)
     last_30 = now - timedelta(days=30)
     prev_30 = last_30 - timedelta(days=30)
@@ -156,7 +156,7 @@ async def get_spending_insights(
         )
         .join(Category, Transaction.category_id == Category.id)
         .where(
-            Transaction.user_id == user_id,
+            Transaction.org_id == org_id,
             Transaction.type == "expense",
             Transaction.transaction_date >= last_30,
         )
@@ -173,7 +173,7 @@ async def get_spending_insights(
         )
         .join(Category, Transaction.category_id == Category.id)
         .where(
-            Transaction.user_id == user_id,
+            Transaction.org_id == org_id,
             Transaction.type == "expense",
             Transaction.transaction_date >= prev_30,
             Transaction.transaction_date < last_30,
@@ -230,7 +230,7 @@ async def get_spending_insights(
     # Totals
     income_result = await db.execute(
         select(func.coalesce(func.sum(Transaction.amount), 0)).where(
-            Transaction.user_id == user_id,
+            Transaction.org_id == org_id,
             Transaction.type == "income",
             Transaction.transaction_date >= last_30,
         )
@@ -239,7 +239,7 @@ async def get_spending_insights(
 
     expense_result = await db.execute(
         select(func.coalesce(func.sum(Transaction.amount), 0)).where(
-            Transaction.user_id == user_id,
+            Transaction.org_id == org_id,
             Transaction.type == "expense",
             Transaction.transaction_date >= last_30,
         )

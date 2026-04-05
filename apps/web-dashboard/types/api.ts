@@ -3,6 +3,38 @@
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
 
+export interface OrgRef {
+  id: string
+  name: string
+  role: "owner" | "member" | "read_only"
+  is_personal: boolean
+}
+
+export interface OrgMemberResponse {
+  user_id: string
+  email: string
+  full_name: string
+  role: string
+  is_active: boolean
+}
+
+export interface OrgResponse {
+  id: string
+  name: string
+  is_personal: boolean
+  is_active: boolean
+  members: OrgMemberResponse[]
+}
+
+export interface OrgMemberInvite {
+  email: string
+  role: "member" | "read_only"
+}
+
+export interface OrgMemberPatch {
+  role: "owner" | "member" | "read_only"
+}
+
 export interface UserProfile {
   id: string
   email: string
@@ -12,6 +44,7 @@ export interface UserProfile {
   is_admin?: boolean   // optional until backend adds the field; defaults to false
   created_at: string
   updated_at: string
+  organisations?: OrgRef[]
 }
 
 export interface TokenResponse {
