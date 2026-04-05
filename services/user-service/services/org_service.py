@@ -1,6 +1,10 @@
+import asyncio
 import json
+import logging
 import uuid
 
+import httpx
+from config import settings
 from fastapi import HTTPException, status
 from models.audit_log import AuditLog
 from models.org import Organisation, OrgMembership
@@ -9,6 +13,25 @@ from schemas.org import MemberInvite, MemberResponse, MemberRoleUpdate, OrgCreat
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
+logger = logging.getLogger(__name__)
+
+
+async def _notify_invite(invitee_id: uuid.UUID, org_id: uuid.UUID, org_name: str, role: str) -> None:
+    """Fire-and-forget: create a system notification in notification-service for the invitee."""
+    payload = {
+        "user_id": str(invitee_id),
+        "org_id": str(org_id),
+        "type": "system",
+        "title": f"You've been invited to {org_name}",
+        "message": f"You have been added to the organisation '{org_name}' with role '{role}'.",
+        "related_entity_id": str(org_id),
+    }
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            await client.post(f"{settings.notification_service_url}/notifications/internal", json=payload)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Could not send invite notification: %s", exc)
 
 
 async def _audit(
@@ -158,6 +181,8 @@ async def invite_member(org_id: uuid.UUID, data: MemberInvite, inviter: User, db
         invitee.id,
         {"email": invitee.email, "role": data.role},
     )
+
+    asyncio.create_task(_notify_invite(invitee.id, org_id, membership.organisation.name, data.role))
 
     return MemberResponse(
         user_id=invitee.id,

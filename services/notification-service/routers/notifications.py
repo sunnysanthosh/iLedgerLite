@@ -5,12 +5,13 @@ from fastapi import APIRouter, Depends, Query
 from models.org import OrgMembership
 from models.user import User
 from schemas.notification import (
+    InternalNotificationCreate,
     MarkReadResponse,
     NotificationList,
     NotificationResponse,
     ReminderRequest,
 )
-from services.notification_service import create_reminder, list_notifications, mark_as_read
+from services.notification_service import create_reminder, create_system_notification, list_notifications, mark_as_read
 from services.security import get_current_user, get_org_member, get_write_member
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -58,3 +59,20 @@ async def send_reminder_endpoint(
     db: AsyncSession = Depends(get_db),
 ):
     return await create_reminder(membership.user_id, membership.org_id, data.customer_id, data.message, db)
+
+
+@router.post("/internal", response_model=NotificationResponse, status_code=201, include_in_schema=False)
+async def internal_notify_endpoint(
+    data: InternalNotificationCreate,
+    db: AsyncSession = Depends(get_db),
+):
+    """Internal endpoint for service-to-service notifications (no auth required)."""
+    return await create_system_notification(
+        user_id=data.user_id,
+        org_id=data.org_id,
+        title=data.title,
+        message=data.message,
+        notification_type=data.type,
+        related_entity_id=data.related_entity_id,
+        db=db,
+    )
