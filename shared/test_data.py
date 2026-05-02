@@ -8,10 +8,64 @@ Usage:
     from shared.test_data import USERS, ACCOUNTS, TRANSACTIONS, make_access_token
 """
 
+import json
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 from jose import jwt
+
+# ---------------------------------------------------------------------------
+# Permission presets — mirrors user-service/services/permissions.py exactly.
+# Kept here so test fixtures can seed OrgMembership.permissions without
+# importing service code.
+# ---------------------------------------------------------------------------
+_ALL_SCOPES = [
+    "transactions:read",
+    "transactions:write",
+    "ledger:read",
+    "ledger:write",
+    "reports:read",
+    "accounts:read",
+    "accounts:write",
+    "categories:read",
+    "categories:write",
+    "notifications:read",
+    "sync:push",
+    "members:read",
+    "members:invite",
+    "members:remove",
+    "members:role_change",
+    "org:read",
+    "org:settings",
+    "org:delete",
+    "org:transfer",
+    "audit:read",
+]
+
+PERMISSION_PRESETS: dict[str, list[str]] = {
+    "owner": _ALL_SCOPES,
+    "member": [
+        s
+        for s in _ALL_SCOPES
+        if s
+        not in {
+            "org:delete",
+            "org:transfer",
+            "members:remove",
+            "members:role_change",
+            "audit:read",
+        }
+    ],
+    "read_only": [s for s in _ALL_SCOPES if s.endswith(":read")],
+    "accountant": ["transactions:read", "ledger:read", "ledger:write", "reports:read", "accounts:read", "audit:read"],
+    "staff": ["transactions:read", "transactions:write", "ledger:read", "ledger:write", "accounts:read"],
+}
+
+
+def permissions_for(role: str) -> str:
+    """Return JSON-encoded permissions string for a given role."""
+    return json.dumps(PERMISSION_PRESETS.get(role, PERMISSION_PRESETS["member"]))
+
 
 # ---------------------------------------------------------------------------
 # Anchor date: all relative dates computed from here for determinism.
@@ -146,9 +200,15 @@ ORG_ANITA_ID = "00000000-0000-4000-0100-000000000003"
 ORG_VIKRAM_ID = "00000000-0000-4000-0100-000000000004"
 ORG_MEENA_ID = "00000000-0000-4000-0100-000000000005"
 ORG_ARJUN_ID = "00000000-0000-4000-0100-000000000006"
+# Shared Business Org (Rajesh's business — used for cross-role permission tests)
+ORG_RAJESH_BUSINESS_ID = "00000000-0000-4000-0100-000000000007"
 
 # Org Memberships: 00000000-0000-4000-0200-00000000000X
-ORG_MEMBER_IDS = [f"00000000-0000-4000-0200-{str(i).zfill(12)}" for i in range(1, 7)]
+# 1-6: personal org owner memberships; 7-10: cross-role memberships in Rajesh's business org
+ORG_MEMBER_IDS = [f"00000000-0000-4000-0200-{str(i).zfill(12)}" for i in range(1, 11)]
+
+# Business org account (scoped to ORG_RAJESH_BUSINESS_ID for transaction write tests)
+ACCOUNT_RAJESH_BIZ_CASH_ID = "00000000-0000-4000-b000-000000000013"
 
 # Map user_id → personal org_id for convenience
 USER_ORG_MAP = {
@@ -392,6 +452,17 @@ ACCOUNTS = [
         "type": "wallet",
         "currency": "USD",  # Non-INR currency
         "balance": Decimal("500.00"),
+        "is_active": True,
+    },
+    # Rajesh's Business Org — 1 account (org_id set explicitly, not via USER_ORG_MAP backfill)
+    {
+        "id": ACCOUNT_RAJESH_BIZ_CASH_ID,
+        "user_id": USER_RAJESH_ID,
+        "org_id": ORG_RAJESH_BUSINESS_ID,
+        "name": "Business Cash Register",
+        "type": "cash",
+        "currency": "INR",
+        "balance": Decimal("50000.00"),
         "is_active": True,
     },
 ]
@@ -1632,15 +1703,100 @@ ORGANISATIONS = [
         "is_personal": True,
         "is_active": True,
     },
+    # Shared business org — used for cross-role permission regression tests
+    {
+        "id": ORG_RAJESH_BUSINESS_ID,
+        "name": "Kumar Textiles Business",
+        "owner_id": USER_RAJESH_ID,
+        "is_personal": False,
+        "is_active": True,
+    },
 ]
 
+_OWNER_PERMS = permissions_for("owner")
+
 ORG_MEMBERSHIPS = [
-    {"id": ORG_MEMBER_IDS[0], "org_id": ORG_PRIYA_ID, "user_id": USER_PRIYA_ID, "role": "owner", "is_active": True},
-    {"id": ORG_MEMBER_IDS[1], "org_id": ORG_RAJESH_ID, "user_id": USER_RAJESH_ID, "role": "owner", "is_active": True},
-    {"id": ORG_MEMBER_IDS[2], "org_id": ORG_ANITA_ID, "user_id": USER_ANITA_ID, "role": "owner", "is_active": True},
-    {"id": ORG_MEMBER_IDS[3], "org_id": ORG_VIKRAM_ID, "user_id": USER_VIKRAM_ID, "role": "owner", "is_active": True},
-    {"id": ORG_MEMBER_IDS[4], "org_id": ORG_MEENA_ID, "user_id": USER_MEENA_ID, "role": "owner", "is_active": True},
-    {"id": ORG_MEMBER_IDS[5], "org_id": ORG_ARJUN_ID, "user_id": USER_ARJUN_ID, "role": "owner", "is_active": True},
+    {
+        "id": ORG_MEMBER_IDS[0],
+        "org_id": ORG_PRIYA_ID,
+        "user_id": USER_PRIYA_ID,
+        "role": "owner",
+        "permissions": _OWNER_PERMS,
+        "is_active": True,
+    },
+    {
+        "id": ORG_MEMBER_IDS[1],
+        "org_id": ORG_RAJESH_ID,
+        "user_id": USER_RAJESH_ID,
+        "role": "owner",
+        "permissions": _OWNER_PERMS,
+        "is_active": True,
+    },
+    {
+        "id": ORG_MEMBER_IDS[2],
+        "org_id": ORG_ANITA_ID,
+        "user_id": USER_ANITA_ID,
+        "role": "owner",
+        "permissions": _OWNER_PERMS,
+        "is_active": True,
+    },
+    {
+        "id": ORG_MEMBER_IDS[3],
+        "org_id": ORG_VIKRAM_ID,
+        "user_id": USER_VIKRAM_ID,
+        "role": "owner",
+        "permissions": _OWNER_PERMS,
+        "is_active": True,
+    },
+    {
+        "id": ORG_MEMBER_IDS[4],
+        "org_id": ORG_MEENA_ID,
+        "user_id": USER_MEENA_ID,
+        "role": "owner",
+        "permissions": _OWNER_PERMS,
+        "is_active": True,
+    },
+    {
+        "id": ORG_MEMBER_IDS[5],
+        "org_id": ORG_ARJUN_ID,
+        "user_id": USER_ARJUN_ID,
+        "role": "owner",
+        "permissions": _OWNER_PERMS,
+        "is_active": True,
+    },
+    # Cross-role memberships in Rajesh's Business Org (for scope enforcement tests)
+    {
+        "id": ORG_MEMBER_IDS[6],
+        "org_id": ORG_RAJESH_BUSINESS_ID,
+        "user_id": USER_RAJESH_ID,
+        "role": "owner",
+        "permissions": _OWNER_PERMS,
+        "is_active": True,
+    },
+    {
+        "id": ORG_MEMBER_IDS[7],
+        "org_id": ORG_RAJESH_BUSINESS_ID,
+        "user_id": USER_PRIYA_ID,
+        "role": "accountant",
+        "permissions": permissions_for("accountant"),
+        "is_active": True,
+    },
+    {
+        "id": ORG_MEMBER_IDS[8],
+        "org_id": ORG_RAJESH_BUSINESS_ID,
+        "user_id": USER_ANITA_ID,
+        "role": "staff",
+        "permissions": permissions_for("staff"),
+        "is_active": True,
+    },
+    {
+        "id": ORG_MEMBER_IDS[9],
+        "org_id": ORG_RAJESH_BUSINESS_ID,
+        "user_id": USER_VIKRAM_ID,
+        "role": "read_only",
+        "permissions": permissions_for("read_only"),
+        "is_active": True,
+    },
 ]
 
 # Backfill org_id for all data collections using USER_ORG_MAP

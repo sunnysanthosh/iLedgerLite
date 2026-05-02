@@ -12,7 +12,7 @@ from schemas.notification import (
     ReminderRequest,
 )
 from services.notification_service import create_reminder, create_system_notification, list_notifications, mark_as_read
-from services.security import get_current_user, get_org_member, get_write_member
+from services.security import get_current_user, get_write_member, require_scope
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
@@ -23,7 +23,7 @@ async def list_notifications_endpoint(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     unread_only: bool = Query(False),
-    membership: OrgMembership = Depends(get_org_member),
+    membership: OrgMembership = require_scope("notifications:read"),
     db: AsyncSession = Depends(get_db),
 ):
     notifications, total, unread_count = await list_notifications(

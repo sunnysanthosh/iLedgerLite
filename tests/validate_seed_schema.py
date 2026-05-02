@@ -26,8 +26,8 @@ from shared.test_data import (  # noqa: E402
     ORG_MEMBERSHIPS,
     ORGANISATIONS,
     TRANSACTIONS,
-    USERS,
     USER_SETTINGS,
+    USERS,
 )
 
 # ---------------------------------------------------------------------------
@@ -118,8 +118,7 @@ def check_required_fields() -> None:
             for field in required:
                 if field not in item:
                     violations.append(
-                        f"{collection_name}[{i}] (id={item.get('id', '?')}): "
-                        f"missing required field '{field}'"
+                        f"{collection_name}[{i}] (id={item.get('id', '?')}): missing required field '{field}'"
                     )
                 elif item[field] is None:
                     violations.append(
@@ -134,8 +133,7 @@ def check_foreign_keys() -> None:
             val = item.get(field)
             if val is not None and str(val) not in valid_ids:
                 violations.append(
-                    f"FK violation {label}: item[{i}] (id={item.get('id', '?')}) "
-                    f"references unknown {field}='{val}'"
+                    f"FK violation {label}: item[{i}] (id={item.get('id', '?')}) references unknown {field}='{val}'"
                 )
 
 
@@ -169,10 +167,7 @@ def check_org_membership_coverage() -> None:
 
     for org in ORGANISATIONS:
         if not org_owners.get(org["id"]):
-            violations.append(
-                f"ORG_MEMBERSHIPS: org '{org['id']}' ({org.get('name')}) "
-                f"has no active owner membership"
-            )
+            violations.append(f"ORG_MEMBERSHIPS: org '{org['id']}' ({org.get('name')}) has no active owner membership")
 
 
 check_required_fields()
@@ -191,5 +186,7 @@ if violations:
     sys.exit(1)
 else:
     total = sum(len(items) for items, _ in REQUIRED_FIELDS.values())
-    print(f"Seed schema validation passed — {total} rows across {len(REQUIRED_FIELDS)} collections, all constraints satisfied.")
+    print(
+        f"Seed schema validation passed — {total} rows across {len(REQUIRED_FIELDS)} collections, all constraints satisfied."
+    )
     sys.exit(0)

@@ -7,6 +7,8 @@ Run with: cd C:/Temp/LedgerLite && pytest tests/regression/ -v
 
 from decimal import Decimal
 
+from shared.test_data import ACCOUNT_RAJESH_BIZ_CASH_ID, CAT_SALARY_ID
+
 
 # ===========================================================================
 # User Isolation
@@ -161,3 +163,111 @@ class TestEdgeCases:
         cats = data.get("items", data) if isinstance(data, dict) else data
         system_cats = [c for c in cats if c.get("is_system")]
         assert len(system_cats) >= 29
+
+
+# ===========================================================================
+# Scope Enforcement (require_scope permission boundaries)
+# All three test users operate in Rajesh's Business Org:
+#   Priya  → accountant (accounts:read, transactions:read, ledger:*, reports:read — no :write on accounts/txn)
+#   Anita  → staff      (accounts:read, transactions:read/write, ledger:* — no accounts:write)
+#   Vikram → read_only  (all :read scopes only)
+# ===========================================================================
+class TestScopeEnforcement:
+    # --- accountant: has accounts:read, no accounts:write, no transactions:write ---
+
+    async def test_accountant_can_read_accounts(self, seeded_txn_client, priya_as_accountant_headers):
+        """Accountant must be able to list accounts (accounts:read)."""
+        resp = await seeded_txn_client.get("/accounts", headers=priya_as_accountant_headers)
+        assert resp.status_code == 200
+
+    async def test_accountant_cannot_create_account(self, seeded_txn_client, priya_as_accountant_headers):
+        """Accountant must be blocked from creating accounts (no accounts:write)."""
+        resp = await seeded_txn_client.post(
+            "/accounts",
+            json={"name": "New Account", "type": "cash", "currency": "INR"},
+            headers=priya_as_accountant_headers,
+        )
+        assert resp.status_code == 403
+
+    async def test_accountant_can_read_transactions(self, seeded_txn_client, priya_as_accountant_headers):
+        """Accountant must be able to list transactions (transactions:read)."""
+        resp = await seeded_txn_client.get("/transactions", headers=priya_as_accountant_headers)
+        assert resp.status_code == 200
+
+    async def test_accountant_cannot_create_transaction(self, seeded_txn_client, priya_as_accountant_headers):
+        """Accountant must be blocked from creating transactions (no transactions:write)."""
+        resp = await seeded_txn_client.post(
+            "/transactions",
+            json={
+                "account_id": ACCOUNT_RAJESH_BIZ_CASH_ID,
+                "category_id": CAT_SALARY_ID,
+                "type": "income",
+                "amount": "1000.00",
+                "transaction_date": "2026-01-01T10:00:00Z",
+            },
+            headers=priya_as_accountant_headers,
+        )
+        assert resp.status_code == 403
+
+    # --- staff: has transactions:write, accounts:read but no accounts:write ---
+
+    async def test_staff_can_read_accounts(self, seeded_txn_client, anita_as_staff_headers):
+        """Staff must be able to list accounts (accounts:read)."""
+        resp = await seeded_txn_client.get("/accounts", headers=anita_as_staff_headers)
+        assert resp.status_code == 200
+
+    async def test_staff_cannot_create_account(self, seeded_txn_client, anita_as_staff_headers):
+        """Staff must be blocked from creating accounts (no accounts:write)."""
+        resp = await seeded_txn_client.post(
+            "/accounts",
+            json={"name": "Staff Account", "type": "cash", "currency": "INR"},
+            headers=anita_as_staff_headers,
+        )
+        assert resp.status_code == 403
+
+    async def test_staff_can_create_transaction(self, seeded_txn_client, anita_as_staff_headers):
+        """Staff must be able to create transactions (transactions:write)."""
+        resp = await seeded_txn_client.post(
+            "/transactions",
+            json={
+                "account_id": ACCOUNT_RAJESH_BIZ_CASH_ID,
+                "category_id": CAT_SALARY_ID,
+                "type": "income",
+                "amount": "5000.00",
+                "transaction_date": "2026-01-15T10:00:00Z",
+            },
+            headers=anita_as_staff_headers,
+        )
+        # 201 = scope passed + transaction created; not 403 = scope check passed
+        assert resp.status_code in (201, 200)
+
+    # --- read_only: only :read scopes ---
+
+    async def test_read_only_can_read_accounts(self, seeded_txn_client, vikram_as_read_only_headers):
+        """Read-only member must be able to list accounts (accounts:read)."""
+        resp = await seeded_txn_client.get("/accounts", headers=vikram_as_read_only_headers)
+        assert resp.status_code == 200
+
+    async def test_read_only_cannot_create_account(self, seeded_txn_client, vikram_as_read_only_headers):
+        """Read-only member must be blocked from creating accounts (no accounts:write)."""
+        resp = await seeded_txn_client.post(
+            "/accounts",
+            json={"name": "Readonly Account", "type": "cash", "currency": "INR"},
+            headers=vikram_as_read_only_headers,
+        )
+        assert resp.status_code == 403
+
+    async def test_read_only_cannot_create_transaction(self, seeded_txn_client, vikram_as_read_only_headers):
+        """Read-only member must be blocked from creating transactions (no transactions:write)."""
+        resp = await seeded_txn_client.post(
+            "/transactions",
+            json={
+                "account_id": ACCOUNT_RAJESH_BIZ_CASH_ID,
+                "category_id": CAT_SALARY_ID,
+                "type": "expense",
+                "amount": "100.00",
+                "transaction_date": "2026-01-15T10:00:00Z",
+            },
+            headers=vikram_as_read_only_headers,
+        )
+        assert resp.status_code == 403

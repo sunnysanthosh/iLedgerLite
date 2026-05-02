@@ -8,12 +8,14 @@ from schemas.org import MemberInvite, MemberResponse, MemberRoleUpdate, OrgCreat
 from services.org_service import (
     change_member_role,
     create_org,
+    delete_org,
     get_org,
     invite_member,
     list_audit_log,
     list_members,
     list_orgs,
     remove_member,
+    transfer_org,
 )
 from services.security import get_current_user
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -85,6 +87,25 @@ async def remove(
     db: AsyncSession = Depends(get_db),
 ):
     await remove_member(org_id, target_user_id, current_user, db)
+
+
+@router.delete("/{org_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete(
+    org_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await delete_org(org_id, current_user, db)
+
+
+@router.post("/{org_id}/transfer", response_model=MemberResponse)
+async def transfer(
+    org_id: uuid.UUID,
+    to_user_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await transfer_org(org_id, to_user_id, current_user, db)
 
 
 @router.get("/{org_id}/audit", response_model=AuditLogList)

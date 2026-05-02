@@ -29,6 +29,7 @@ from shared.test_data import (
     ORG_MEENA_ID,
     ORG_MEMBERSHIPS,
     ORG_PRIYA_ID,
+    ORG_RAJESH_BUSINESS_ID,
     ORG_RAJESH_ID,
     ORG_VIKRAM_ID,
     ORGANISATIONS,
@@ -339,6 +340,7 @@ async def seeded_txn_client(txn_db) -> AsyncGenerator[AsyncClient, None]:
                 org_id=_uid(m["org_id"]),
                 user_id=_uid(m["user_id"]),
                 role=m["role"],
+                permissions=m["permissions"],
                 is_active=m["is_active"],
             )
         )
@@ -442,6 +444,7 @@ async def seeded_ledger_client(ledger_db) -> AsyncGenerator[AsyncClient, None]:
                 org_id=_uid(m["org_id"]),
                 user_id=_uid(m["user_id"]),
                 role=m["role"],
+                permissions=m["permissions"],
                 is_active=m["is_active"],
             )
         )
@@ -521,3 +524,23 @@ def meena_headers():
 @pytest.fixture(scope="session")
 def arjun_headers():
     return make_auth_headers(USER_ARJUN_ID, org_id=ORG_ARJUN_ID)
+
+
+# Cross-role headers for scope enforcement regression tests
+# All three use Rajesh's business org (ORG_RAJESH_BUSINESS_ID)
+@pytest.fixture(scope="session")
+def priya_as_accountant_headers():
+    """Priya acting as accountant in Kumar Textiles Business org."""
+    return make_auth_headers(USER_PRIYA_ID, org_id=ORG_RAJESH_BUSINESS_ID)
+
+
+@pytest.fixture(scope="session")
+def anita_as_staff_headers():
+    """Anita acting as staff in Kumar Textiles Business org."""
+    return make_auth_headers(USER_ANITA_ID, org_id=ORG_RAJESH_BUSINESS_ID)
+
+
+@pytest.fixture(scope="session")
+def vikram_as_read_only_headers():
+    """Vikram acting as read_only in Kumar Textiles Business org."""
+    return make_auth_headers(USER_VIKRAM_ID, org_id=ORG_RAJESH_BUSINESS_ID)

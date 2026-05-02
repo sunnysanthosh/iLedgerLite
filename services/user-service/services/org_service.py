@@ -10,6 +10,7 @@ from models.audit_log import AuditLog
 from models.org import Organisation, OrgMembership
 from models.user import User
 from schemas.org import MemberInvite, MemberResponse, MemberRoleUpdate, OrgCreate, OrgListItem, OrgResponse
+from services.permissions import resolve_permissions
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -152,20 +153,16 @@ async def invite_member(org_id: uuid.UUID, data: MemberInvite, inviter: User, db
         # Re-activate if previously deactivated
         existing_m.is_active = True
         existing_m.role = data.role
+        existing_m.permissions = json.dumps(resolve_permissions(data.role))
         await db.flush()
-        return MemberResponse(
-            user_id=invitee.id,
-            email=invitee.email,
-            full_name=invitee.full_name,
-            role=data.role,
-            is_active=True,
-        )
+        return MemberResponse.from_membership(existing_m, invitee)
 
     new_membership = OrgMembership(
         id=uuid.uuid4(),
         org_id=org_id,
         user_id=invitee.id,
         role=data.role,
+        permissions=json.dumps(resolve_permissions(data.role)),
         invited_by=inviter.id,
         is_active=True,
     )
@@ -184,13 +181,7 @@ async def invite_member(org_id: uuid.UUID, data: MemberInvite, inviter: User, db
 
     asyncio.create_task(_notify_invite(invitee.id, org_id, membership.organisation.name, data.role))
 
-    return MemberResponse(
-        user_id=invitee.id,
-        email=invitee.email,
-        full_name=invitee.full_name,
-        role=data.role,
-        is_active=True,
-    )
+    return MemberResponse.from_membership(new_membership, invitee)
 
 
 async def list_members(org_id: uuid.UUID, user: User, db: AsyncSession) -> list[MemberResponse]:
@@ -216,6 +207,7 @@ async def change_member_role(
 
     old_role = target_m.role
     target_m.role = data.role
+    target_m.permissions = json.dumps(resolve_permissions(data.role))
     await db.flush()
 
     result2 = await db.execute(select(User).where(User.id == target_user_id))
@@ -231,13 +223,7 @@ async def change_member_role(
         {"from": old_role, "to": data.role, "email": target_user.email},
     )
 
-    return MemberResponse(
-        user_id=target_user.id,
-        email=target_user.email,
-        full_name=target_user.full_name,
-        role=data.role,
-        is_active=True,
-    )
+    return MemberResponse.from_membership(target_m, target_user)
 
 
 async def remove_member(org_id: uuid.UUID, target_user_id: uuid.UUID, requester: User, db: AsyncSession) -> None:
@@ -319,17 +305,84 @@ async def _load_members(org_id: uuid.UUID, db: AsyncSession) -> list[MemberRespo
         .join(User, OrgMembership.user_id == User.id)
         .where(OrgMembership.org_id == org_id, OrgMembership.is_active.is_(True))
     )
-    rows = result.all()
-    return [
-        MemberResponse(
-            user_id=m.user_id,
-            email=u.email,
-            full_name=u.full_name,
-            role=m.role,
-            is_active=m.is_active,
+    return [MemberResponse.from_membership(m, u) for m, u in result.all()]
+
+
+async def delete_org(org_id: uuid.UUID, user: User, db: AsyncSession) -> None:
+    """Soft-delete an org. Blocked for personal orgs and orgs with other active members."""
+    membership = await _require_membership(org_id, user.id, db, required_role="owner")
+    org = membership.organisation
+
+    if org.is_personal:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Personal organisations cannot be deleted")
+
+    other_members = await db.execute(
+        select(OrgMembership).where(
+            OrgMembership.org_id == org_id,
+            OrgMembership.user_id != user.id,
+            OrgMembership.is_active.is_(True),
         )
-        for m, u in rows
-    ]
+    )
+    if other_members.scalars().first() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Remove all other members before deleting the organisation",
+        )
+
+    org.is_active = False
+    membership.is_active = False
+    await db.flush()
+    await _audit(db, org_id, user.id, "org_deleted", "organisation", org_id, {"name": org.name})
+
+
+async def transfer_org(org_id: uuid.UUID, to_user_id: uuid.UUID, requester: User, db: AsyncSession) -> MemberResponse:
+    """Transfer ownership to another active member."""
+    await _require_membership(org_id, requester.id, db, required_role="owner")
+
+    result = await db.execute(
+        select(OrgMembership, User)
+        .join(User, OrgMembership.user_id == User.id)
+        .where(
+            OrgMembership.org_id == org_id,
+            OrgMembership.user_id == to_user_id,
+            OrgMembership.is_active.is_(True),
+        )
+    )
+    row = result.first()
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Target user is not an active member")
+
+    target_m, target_user = row
+
+    # Downgrade current owner → member
+    requester_result = await db.execute(
+        select(OrgMembership).where(OrgMembership.org_id == org_id, OrgMembership.user_id == requester.id)
+    )
+    requester_m = requester_result.scalars().first()
+    requester_m.role = "member"
+    requester_m.permissions = json.dumps(resolve_permissions("member"))
+
+    # Upgrade target → owner
+    target_m.role = "owner"
+    target_m.permissions = json.dumps(resolve_permissions("owner"))
+
+    # Update org owner_id
+    org_result = await db.execute(select(Organisation).where(Organisation.id == org_id))
+    org = org_result.scalars().first()
+    org.owner_id = to_user_id
+
+    await db.flush()
+    await _audit(
+        db,
+        org_id,
+        requester.id,
+        "ownership_transferred",
+        "organisation",
+        org_id,
+        {"from_user": str(requester.id), "to_user": str(to_user_id), "to_email": target_user.email},
+    )
+
+    return MemberResponse.from_membership(target_m, target_user)
 
 
 async def list_audit_log(

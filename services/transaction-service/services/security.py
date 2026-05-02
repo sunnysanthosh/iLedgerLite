@@ -1,3 +1,4 @@
+import json
 import uuid
 
 from config import settings
@@ -83,3 +84,17 @@ async def get_write_member(
             status_code=status.HTTP_403_FORBIDDEN, detail="Read-only members cannot perform this action"
         )
     return membership
+
+
+def require_scope(scope: str):
+    """Dependency factory — resolves org membership and enforces a permission scope."""
+
+    async def _check(membership: OrgMembership = Depends(get_org_member)) -> OrgMembership:
+        perms = membership.permissions
+        if isinstance(perms, str):
+            perms = json.loads(perms)
+        if scope not in perms:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Missing required permission: {scope}")
+        return membership
+
+    return Depends(_check)

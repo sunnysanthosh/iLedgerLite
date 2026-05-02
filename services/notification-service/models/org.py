@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 
 from models.base import Base
-from sqlalchemy import Boolean, DateTime, String, Uuid, func
+from sqlalchemy import Boolean, DateTime, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
@@ -27,6 +27,7 @@ class OrgMembership(Base):
     org_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
     user_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
     role: Mapped[str] = mapped_column(String(20), nullable=False)
+    permissions: Mapped[str] = mapped_column(Text, nullable=False, server_default="[]")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     invited_by: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

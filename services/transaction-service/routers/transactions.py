@@ -10,7 +10,7 @@ from schemas.transaction import (
     TransactionResponse,
     TransactionUpdate,
 )
-from services.security import get_org_member, get_write_member
+from services.security import require_scope
 from services.transaction_service import (
     create_transaction,
     delete_transaction,
@@ -26,7 +26,7 @@ router = APIRouter(prefix="/transactions", tags=["transactions"])
 @router.post("", response_model=TransactionResponse, status_code=status.HTTP_201_CREATED)
 async def create(
     data: TransactionCreate,
-    membership: OrgMembership = Depends(get_write_member),
+    membership: OrgMembership = require_scope("transactions:write"),
     db: AsyncSession = Depends(get_db),
 ):
     return await create_transaction(membership.user_id, membership.org_id, data, db)
@@ -41,7 +41,7 @@ async def list_all(
     date_to: datetime | None = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
-    membership: OrgMembership = Depends(get_org_member),
+    membership: OrgMembership = require_scope("transactions:read"),
     db: AsyncSession = Depends(get_db),
 ):
     items, total = await list_transactions(
@@ -61,7 +61,7 @@ async def list_all(
 @router.get("/{transaction_id}", response_model=TransactionResponse)
 async def get_one(
     transaction_id: uuid.UUID,
-    membership: OrgMembership = Depends(get_org_member),
+    membership: OrgMembership = require_scope("transactions:read"),
     db: AsyncSession = Depends(get_db),
 ):
     return await get_transaction(transaction_id, membership.org_id, db)
@@ -71,7 +71,7 @@ async def get_one(
 async def update(
     transaction_id: uuid.UUID,
     data: TransactionUpdate,
-    membership: OrgMembership = Depends(get_write_member),
+    membership: OrgMembership = require_scope("transactions:write"),
     db: AsyncSession = Depends(get_db),
 ):
     return await update_transaction(transaction_id, membership.org_id, data, db)
@@ -80,7 +80,7 @@ async def update(
 @router.delete("/{transaction_id}", status_code=status.HTTP_200_OK)
 async def delete(
     transaction_id: uuid.UUID,
-    membership: OrgMembership = Depends(get_write_member),
+    membership: OrgMembership = require_scope("transactions:write"),
     db: AsyncSession = Depends(get_db),
 ):
     await delete_transaction(transaction_id, membership.org_id, db)

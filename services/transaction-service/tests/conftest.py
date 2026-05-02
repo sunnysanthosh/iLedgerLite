@@ -13,6 +13,8 @@ from models.org import Organisation, OrgMembership
 from models.user import User
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from shared.test_data import permissions_for
+
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 engine = create_async_engine(TEST_DB_URL, echo=False)
 TestSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
@@ -93,6 +95,7 @@ async def seed_user(db_session: AsyncSession) -> User:
         org_id=org.id,
         user_id=user.id,
         role="owner",
+        permissions=permissions_for("owner"),
         is_active=True,
     )
     db_session.add(membership)
@@ -131,6 +134,7 @@ async def read_only_headers(db_session: AsyncSession, seed_user: User) -> dict:
         org_id=seed_user._org_id,  # type: ignore[attr-defined]
         user_id=ro_user.id,
         role="read_only",
+        permissions=permissions_for("read_only"),
         is_active=True,
     )
     db_session.add(ro_membership)
