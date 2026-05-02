@@ -1,5 +1,8 @@
+import asyncio
+import logging
 import uuid
 
+import httpx
 from config import settings
 from db import get_db
 from fastapi import Depends, HTTPException, status
@@ -19,9 +22,24 @@ from services.security import (
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+logger = logging.getLogger(__name__)
 bearer_scheme = HTTPBearer(auto_error=False)
 
 INVALID_CREDENTIALS = "Invalid email or password"
+
+
+async def _send_welcome_email(email: str, full_name: str) -> None:
+    payload = {
+        "to_email": email,
+        "to_name": full_name,
+        "template": "welcome",
+        "context": {"full_name": full_name},
+    }
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            await client.post(f"{settings.notification_service_url}/email/send", json=payload)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Could not send welcome email to %s: %s", email, exc)
 
 
 async def register_user(data: RegisterRequest, db: AsyncSession) -> User:
@@ -62,6 +80,7 @@ async def register_user(data: RegisterRequest, db: AsyncSession) -> User:
     db.add(membership)
     await db.flush()
     await db.refresh(user)
+    asyncio.create_task(_send_welcome_email(user.email, user.full_name))
     return user
 
 

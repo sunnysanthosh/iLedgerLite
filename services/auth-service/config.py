@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
     allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:8080", "http://localhost:19006"]
+    notification_service_url: str = "http://localhost:8007"
 
     @property
     def async_database_url(self) -> str:
