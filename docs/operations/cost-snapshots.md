@@ -12,3 +12,4 @@
 | 2026-03-22 | sprint-14-done | 3 | db-f1-micro | RUNNABLE | manual capture; **hibernated same day** — GKE=0, SQL=STOPPED |
 | 2026-04-05 | sprint-15-done |  | db-f1-micro | STOPPED | auto-captured |
 | 2026-04-05 | sprint-16-done |  | db-f1-micro | STOPPED | auto-captured |
+| 2026-05-02 | sprint-17-permissions-done |  | db-f1-micro | STOPPED | auto-captured |
