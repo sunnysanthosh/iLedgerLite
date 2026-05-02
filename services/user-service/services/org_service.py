@@ -73,6 +73,7 @@ async def create_org(data: OrgCreate, owner: User, db: AsyncSession) -> OrgRespo
         org_id=org.id,
         user_id=owner.id,
         role="owner",
+        permissions=json.dumps(resolve_permissions("owner")),
         is_active=True,
     )
     db.add(membership)

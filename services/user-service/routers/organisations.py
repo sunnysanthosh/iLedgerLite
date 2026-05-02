@@ -4,7 +4,7 @@ from db import get_db
 from fastapi import APIRouter, Depends, Query, status
 from models.user import User
 from schemas.audit import AuditLogEntry, AuditLogList
-from schemas.org import MemberInvite, MemberResponse, MemberRoleUpdate, OrgCreate, OrgListItem, OrgResponse
+from schemas.org import MemberInvite, MemberResponse, MemberRoleUpdate, OrgCreate, OrgListItem, OrgResponse, OrgTransfer
 from services.org_service import (
     change_member_role,
     create_org,
@@ -101,11 +101,11 @@ async def delete(
 @router.post("/{org_id}/transfer", response_model=MemberResponse)
 async def transfer(
     org_id: uuid.UUID,
-    to_user_id: uuid.UUID,
+    data: OrgTransfer,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await transfer_org(org_id, to_user_id, current_user, db)
+    return await transfer_org(org_id, data.to_user_id, current_user, db)
 
 
 @router.get("/{org_id}/audit", response_model=AuditLogList)
