@@ -69,6 +69,8 @@ async def seed_user(db_session: AsyncSession) -> User:
     """Create a test user + personal org in the database and return the user."""
     from models.org import Organisation, OrgMembership
 
+    from shared.test_data import permissions_for
+
     user = User(
         id=uuid.uuid4(),
         email="testuser@example.com",
@@ -95,6 +97,7 @@ async def seed_user(db_session: AsyncSession) -> User:
         org_id=org.id,
         user_id=user.id,
         role="owner",
+        permissions=permissions_for("owner"),
         is_active=True,
     )
     db_session.add(membership)

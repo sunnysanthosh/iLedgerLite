@@ -10,9 +10,11 @@ from models.base import Base
 from models.customer import Customer  # noqa: F401 — register with Base
 from models.ledger_entry import LedgerEntry  # noqa: F401
 from models.notification import Notification
-from models.org import Organisation, OrgMembership  # noqa: F401 — register with Base
+from models.org import Organisation, OrgMembership
 from models.user import User
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+from shared.test_data import permissions_for  # noqa: F401 — register with Base
 
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 engine = create_async_engine(TEST_DB_URL, echo=False)
@@ -102,6 +104,7 @@ async def seed_user(db_session: AsyncSession) -> User:
         org_id=org.id,
         user_id=user.id,
         role="owner",
+        permissions=permissions_for("owner"),
         is_active=True,
     )
     db_session.add(membership)
@@ -169,6 +172,7 @@ async def seed_full_data(db_session: AsyncSession):
                 org_id=_id(org_id_str),
                 user_id=_id(u["id"]),
                 role="owner",
+                permissions=permissions_for("owner"),
                 is_active=True,
             )
         )

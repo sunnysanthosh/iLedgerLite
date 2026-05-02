@@ -11,15 +11,18 @@ from jose import jwt
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from config import settings
 from models.account import Account
 from models.base import Base
 from models.customer import Customer
-from models.org import Organisation, OrgMembership  # noqa: F401 — register with Base
+from models.org import Organisation, OrgMembership
 from models.sync_log import SyncLog  # noqa: F401 — register with Base
 from models.transaction import Transaction
 from models.user import User
+
+from shared.test_data import permissions_for
 
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 engine = create_async_engine(TEST_DB_URL, echo=False)
@@ -101,6 +104,7 @@ async def seed_user(db_session: AsyncSession) -> User:
         org_id=org.id,
         user_id=user.id,
         role="owner",
+        permissions=permissions_for("owner"),
         is_active=True,
     )
     db_session.add(membership)
