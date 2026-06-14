@@ -1,11 +1,11 @@
 # LedgerLite — Product & Engineering Roadmap
 
 > **RICE scoring:** Reach (1–10 users/systems affected) × Impact (0.25/0.5/1/2/3) × Confidence (%) ÷ Effort (weeks)
-> Higher score = do first. Last updated: 2026-03-22 after Sprint 14.
+> Higher score = do first. Last updated: 2026-06-15 after Sprint 17.
 
 ---
 
-## Current State — Sprint 16 Done ✅ (tagged `sprint-16-done`)
+## Current State — Sprint 17 Done ✅ (tagged `sprint-17-done`)
 
 | Component | Status | Details |
 |---|---|---|
@@ -17,7 +17,7 @@
 | **notification-service** | ✅ Done | 4 endpoints, 12 tests; org_id NOT NULL; internal invite endpoint |
 | **ai-service** | ✅ Done | 3 endpoints, 16 tests; org_id NOT NULL |
 | **sync-service** | ✅ Done | 3 endpoints, 14 tests; org_id NOT NULL; read_only enforcement |
-| **database** | ✅ Done | schema.sql, 7 Alembic migrations, organisations + org_memberships + audit_log tables; org_id NOT NULL on 5 tables |
+| **database** | ✅ Done | schema.sql, 8 Alembic migrations, organisations + org_memberships + audit_log tables; org_id NOT NULL on 5 tables; granular permission scopes |
 | **CI/CD** | ✅ Done | test + lint + build (GHCR + Trivy) + deploy (smoke + rollback) + terraform-lint + 60% coverage gate + Slack alerts |
 | **apps/mobile-app** | ✅ Done | Flutter — 6 screens, 43 Dart files, offline sync, cert pinning, org selection + X-Org-ID |
 | **apps/web-dashboard** | ✅ Done | Next.js 14 — 6 tabs + admin infra + org settings tab; OrgSwitcher; X-Org-ID header |
@@ -27,7 +27,7 @@
 | **multi-user orgs** | ✅ Done | Full stack: backend org CRUD + org_id scoping (all 8 services) + web OrgSwitcher + Flutter OrgSelectionScreen |
 | **org hardening** | ✅ Done | NOT NULL constraints, read_only enforcement, audit log, invite notifications |
 
-**171 tests passing. GCP staging live. main at `sprint-15-done`. PR #23 open.**
+**180 unit tests + 13 smoke + 26 regression passing (all green, 4-gate suite). main at `sprint-17-done`. Staging hibernated (GKE 0 nodes, Cloud SQL stopped) — start only for true E2E runs, see [environment-lifecycle.md](docs/operations/environment-lifecycle.md).**
 
 ---
 

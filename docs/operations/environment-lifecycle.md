@@ -182,6 +182,21 @@ running "just in case" and don't wait for the nightly cron.
 
 ---
 
+## gcloud Quirks & Gotchas (learned the hard way)
+
+These don't change *what* to do, but they explain confusing output you may see while
+starting/stopping staging. Documented 2026-06-15 after a hibernation cycle surfaced all three
+in one session.
+
+| Symptom | What's actually happening | What to do |
+|---|---|---|
+| `gcloud container clusters list` returns 403 "This API method requires billing to be enabled" | The project's billing account got closed/detached (not a quota or auth issue) | Check `gcloud billing accounts list` / `gcloud billing projects describe <project>` for `billingEnabled: false`. Re-link the billing account, then retry — no code or config change needed. |
+| `gcloud container clusters list` still shows `NUM_NODES: 1` (or stale count) right after a `resize --num-nodes 0` | The `NUM_NODES` column in `clusters list` is cached/stale, not authoritative | Verify the real node count with `gcloud compute instance-groups list` — all zonal managed instance groups for the node pool should show 0 instances. |
+| `gcloud sql instances patch --activation-policy=ALWAYS` (or `NEVER`) exits 1 client-side with "Operation ... is taking longer than expected", instance shows `MAINTENANCE` for 10-20 min | The client gives up polling before the server-side operation finishes; the start/stop itself usually succeeds | Don't retry immediately. Poll `gcloud sql instances describe <name>` until `state: RUNNABLE` (or `STOPPED`), then proceed. |
+| Retrying a `gcloud sql instances patch` immediately returns 409 "another operation was already in progress" | The previous patch operation is still running server-side | Wait for `gcloud sql instances describe` to show no pending operation / a stable `RUNNABLE` state, then retry. |
+
+---
+
 ## Related Documents
 
 | Document | Purpose |

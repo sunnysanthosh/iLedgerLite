@@ -38,6 +38,36 @@ This file captures key project state for resuming work across sessions.
 
 ## Resume Context
 
+### Week of 2026-06-15 — session wrap-up (resume point)
+
+- **Sprint 17 closed and tagged:** `sprint-17-done` at `97a64a5` (PR #26 merged, squash). Covered
+  granular org permissions (PERMISSION_PRESETS, migration 008, `require_scope`, accountant/staff
+  roles) and transactional email delivery (welcome + invite emails).
+- **SaaSpocalypse assessment done:** `docs/SaaSpocalypse-Assessment.md` — LLM-as-Judge review of
+  whether iLedgerLite needs rearchitecting for the agent era. Verdict: current direction is sound,
+  nourish it; near-term adds are `actor_type` on audit_log, tool/contract layer, real LLM in
+  ai-service, agent-approval spike. TD-34 (LLM provider abstraction) added to ROADMAP Tier 2,
+  targeted for S18.
+- **Billing incident resolved:** GCP billing account `01A637-1B4A4F-58C83D` on project
+  `project-6737f3c2-e011-49b7-ae4` was found `OPEN: False` (caused 403s on all `gcloud container`
+  calls). User re-enabled billing; verified `billingEnabled: true`. Documented in
+  `docs/operations/cost-snapshots.md`.
+- **Cloud SQL start/test/stop cycle done:** started `ledgerlite-staging-pg`, ran full local 4-gate
+  suite (180 unit + 13 smoke + 26 regression — all green), confirmed live staging pods are
+  `Pending` (separate, pre-existing capacity issue — GKE has 1 node vs ~3 needed for all 9 pods;
+  not fixed, just documented).
+- **GKE cost reduction:** scaled `ledgerlite-staging` node pool to 0 (verified via
+  `gcloud compute instance-groups list`, not the stale `NUM_NODES` field). **Current infra state:
+  GKE = 0 nodes, Cloud SQL = STOPPED. Staging is fully hibernated.** Start only for a true E2E
+  run, then stop immediately — see `docs/operations/environment-lifecycle.md`.
+- **New team policy codified:** "Where Do Tests Run?" in `docs/operations/environment-lifecycle.md`
+  — all unit tests and the 4-gate suite run locally (`.venv`, no cloud); Docker Compose for manual
+  API exploration; staging started only for true E2E verification of the deployed env. Also added
+  a "gcloud Quirks & Gotchas" table (billing-disabled 403, stale `NUM_NODES`, Cloud SQL
+  patch hang/409) to the same doc.
+- **Next session starts with:** Sprint 18 planning (see candidate scope below) — staging is
+  hibernated, no cleanup needed; just `make dev-start` + `.venv` for local work.
+
 ### Sprint 18 — candidate scope (not yet started)
 
 Deferred from Sprint 17 (see `docs/SPRINT-LOG.md`):
