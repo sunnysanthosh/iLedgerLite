@@ -13,4 +13,4 @@
 | 2026-04-05 | sprint-15-done |  | db-f1-micro | STOPPED | auto-captured |
 | 2026-04-05 | sprint-16-done |  | db-f1-micro | STOPPED | auto-captured |
 | 2026-05-02 | sprint-17-permissions-done |  | db-f1-micro | STOPPED | auto-captured |
-| 2026-06-14 | sprint-17-done | err | db-f1-micro | STOPPED | auto-captured |
+| 2026-06-14 | sprint-17-done | err | db-f1-micro | STOPPED | auto-captured `err` on GKE nodes is **billing disabled** on project `project-6737f3c2-e011-49b7-ae4` — billing account `01A637-1B4A4F-58C83D` shows `OPEN: False`. `gcloud container clusters list` returns 403 (billing required). Actual spend is $0, but `staging-start.yml` / any GCP API call will fail until billing is re-enabled — needs investigation before next deploy. |

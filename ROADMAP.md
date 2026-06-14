@@ -97,6 +97,7 @@ Fixed costs (LB $18, Router $7, Storage $1) are unavoidable regardless of on/off
 | Sprint 12 | ~$71–144/mo | — | Budget Alerts configured; nightly-stop still failing (GCP_SA_KEY not in CI) |
 | Sprint 13 | ~$71–144/mo | — | Always-on; admin cost dashboard live (FT-01) |
 | Sprint 14 | ~$71–144/mo → $0 compute | — | Hibernated 2026-03-22: GKE=0 nodes, SQL=STOPPED; GCP_SA_KEY bug fixed |
+| Sprint 17 | $0 (billing disabled) | — | 2026-06-14: SQL still STOPPED; billing account `01A637-1B4A4F-58C83D` shows `OPEN: False` on project `project-6737f3c2-e011-49b7-ae4` — GCP APIs (GKE, etc.) return 403. **Action needed before next staging restart:** re-enable/re-link billing account. See `docs/operations/cost-snapshots.md`. |
 
 ---
 
