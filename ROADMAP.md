@@ -98,6 +98,7 @@ Fixed costs (LB $18, Router $7, Storage $1) are unavoidable regardless of on/off
 | Sprint 13 | ~$71–144/mo | — | Always-on; admin cost dashboard live (FT-01) |
 | Sprint 14 | ~$71–144/mo → $0 compute | — | Hibernated 2026-03-22: GKE=0 nodes, SQL=STOPPED; GCP_SA_KEY bug fixed |
 | Sprint 17 | $0 (billing disabled) | — | 2026-06-14: SQL still STOPPED; billing account `01A637-1B4A4F-58C83D` shows `OPEN: False` on project `project-6737f3c2-e011-49b7-ae4` — GCP APIs (GKE, etc.) return 403. **Action needed before next staging restart:** re-enable/re-link billing account. See `docs/operations/cost-snapshots.md`. |
+| Sprint 17 | ~partial (GKE 1 node running, SQL stopped) | — | 2026-06-15: billing re-enabled. GKE cluster `ledgerlite-staging` is RUNNING (1 node, e2-medium) — accruing compute cost. Cloud SQL still STOPPED — start it before relying on staging. See `docs/operations/cost-snapshots.md`. |
 
 ---
 
