@@ -18,21 +18,51 @@ from sqlalchemy.orm import selectinload
 logger = logging.getLogger(__name__)
 
 
-async def _notify_invite(invitee_id: uuid.UUID, org_id: uuid.UUID, org_name: str, role: str) -> None:
-    """Fire-and-forget: create a system notification in notification-service for the invitee."""
-    payload = {
-        "user_id": str(invitee_id),
-        "org_id": str(org_id),
-        "type": "system",
-        "title": f"You've been invited to {org_name}",
-        "message": f"You have been added to the organisation '{org_name}' with role '{role}'.",
-        "related_entity_id": str(org_id),
-    }
-    try:
-        async with httpx.AsyncClient(timeout=3.0) as client:
-            await client.post(f"{settings.notification_service_url}/notifications/internal", json=payload)
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Could not send invite notification: %s", exc)
+async def _notify_invite(
+    invitee_id: uuid.UUID,
+    org_id: uuid.UUID,
+    org_name: str,
+    role: str,
+    invitee_email: str,
+    invitee_name: str,
+    inviter_name: str,
+) -> None:
+    """Fire-and-forget: in-app system notification + transactional invite email."""
+    async with httpx.AsyncClient(timeout=3.0) as client:
+        # In-app notification
+        try:
+            await client.post(
+                f"{settings.notification_service_url}/notifications/internal",
+                json={
+                    "user_id": str(invitee_id),
+                    "org_id": str(org_id),
+                    "type": "system",
+                    "title": f"You've been invited to {org_name}",
+                    "message": f"You have been added to '{org_name}' with role '{role}'.",
+                    "related_entity_id": str(org_id),
+                },
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Could not send invite notification: %s", exc)
+
+        # Invite email
+        try:
+            await client.post(
+                f"{settings.notification_service_url}/email/send",
+                json={
+                    "to_email": invitee_email,
+                    "to_name": invitee_name,
+                    "template": "invite",
+                    "context": {
+                        "full_name": invitee_name,
+                        "org_name": org_name,
+                        "role": role,
+                        "inviter_name": inviter_name,
+                    },
+                },
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Could not send invite email: %s", exc)
 
 
 async def _audit(
@@ -179,7 +209,17 @@ async def invite_member(org_id: uuid.UUID, data: MemberInvite, inviter: User, db
         {"email": invitee.email, "role": data.role},
     )
 
-    asyncio.create_task(_notify_invite(invitee.id, org_id, membership.organisation.name, data.role))
+    asyncio.create_task(
+        _notify_invite(
+            invitee.id,
+            org_id,
+            membership.organisation.name,
+            data.role,
+            invitee.email,
+            invitee.full_name,
+            inviter.full_name,
+        )
+    )
 
     return MemberResponse.from_membership(new_membership, invitee)
 

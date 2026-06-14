@@ -813,3 +813,65 @@ alembic history
 - Granular org-level permissions (beyond owner/member/read_only)
 - Email delivery for invitations (SMTP / SendGrid integration)
 - Org deletion / transfer ownership flows
+
+---
+
+## Sprint 17 — Granular Org Permissions + Transactional Email Delivery (Completed — `sprint-17-done`)
+
+**Goal:** Replace the coarse owner/member/read_only role model with per-scope permissions, and
+deliver real transactional emails (welcome + org invite) instead of in-app-only notifications.
+
+**Delivered:**
+
+### Granular org permissions (PR #24, `e74ab29`)
+- `permissions.py`: `PERMISSION_PRESETS` for `owner`, `member`, `read_only`, plus two new
+  custom roles — `accountant` (read-everything, no writes) and `staff` (read + transaction
+  writes, no account/customer writes).
+- **Migration 008** (`008_org_membership_permissions.py`): adds `org_memberships.permissions`
+  (JSON text, default `[]`).
+- `require_scope(scope)` dependency factory added to `services/security.py` in all 5 data
+  services (transaction, ledger, report, notification, sync); routers wired per-scope:
+  `accounts:read/write`, `transactions:read/write`, `ledger:read/write`, `reports:read`,
+  `notifications:read`, `sync:push`.
+- `OrgMembership` schema/service: `permissions` field + `permissions_for(role)` applied on
+  invite and role-change.
+- `shared/test_data.py`: cross-role seed data (Kumar Textiles Business org with
+  accountant/staff/read_only memberships).
+- `TestScopeEnforcement` (10 regression tests) covering all three custom roles.
+
+### Transactional email delivery (`1e20bcd`)
+- **notification-service**: new `services/email_service.py` — SMTP sender via `aiosmtplib`,
+  `welcome` and `invite` templates (plain text + HTML), gated by `smtp_host` config
+  (`is_enabled()` — no-op when SMTP not configured, mirrors the fire-and-forget pattern from
+  Sprint 16's invite notifications).
+- New internal endpoint `POST /email/send` (`include_in_schema=False`, no auth — trusted
+  internal network only), `schemas/email.py::EmailSendRequest`.
+- **auth-service**: `_send_welcome_email()` fires `POST /email/send` (template=`welcome`) as
+  `asyncio.create_task()` after successful registration — failures logged at WARNING, never
+  block registration.
+- **user-service**: `_notify_invite()` extended to also send an `invite` email
+  (template=`invite`, with `org_name`/`role`/`inviter_name` context) alongside the existing
+  in-app notification — both fire-and-forget.
+- Config: `smtp_host`/`smtp_port`/`smtp_user`/`smtp_password`/`smtp_from` added to
+  notification-service settings; email is fully disabled (no-op) when `smtp_host` is empty.
+
+**Tests:** 180 passing across all 8 services (15 auth, 34 user, 32 transaction, 30 ledger,
+18 report, 21 notification, 16 ai, 14 sync). Schema, smoke (13), and regression (26) gates all
+green.
+
+**Key Decisions:**
+- Email send is opt-in via `smtp_host` — local/dev/test environments run with email silently
+  disabled, no SMTP server required for the test suite.
+- Port 465 → implicit TLS, port 587 → STARTTLS — chosen automatically from `smtp_port`
+  (587 is the SendGrid/most-providers default).
+- Welcome/invite email failures are logged, not raised, to the caller — registration and
+  invite flows must never fail because email delivery failed.
+
+**Deferred to Sprint 18:**
+- Org deletion / transfer ownership flows
+- TD-34: provider-agnostic LLM abstraction for `ai-service` (replace rule-based
+  categorization/insights/OCR with a real LLM, GCP Vertex AI as first implementation) — see
+  `docs/SaaSpocalypse-Assessment.md`
+- Agent-native foundations per `docs/SaaSpocalypse-Assessment.md`: `actor_type` on
+  `audit_log`, tool/contract layer over existing service APIs, "agent proposes, human
+  approves" flow, pull forward Public API + webhooks from Phase 3

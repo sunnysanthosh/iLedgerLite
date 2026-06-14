@@ -2,6 +2,7 @@ from config import settings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from middleware import TraceIDMiddleware, configure_logging
+from routers.email import router as email_router
 from routers.notifications import router as notifications_router
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -24,6 +25,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(TraceIDMiddleware)
 
 app.include_router(notifications_router)
+app.include_router(email_router)
 
 
 @app.get("/health")
