@@ -136,6 +136,7 @@ Fixed costs (LB $18, Router $7, Storage $1) are unavoidable regardless of on/off
 | TD-24 | Terraform lint in CI (terraform validate + fmt check) | Terraform | 3 | 1 | 1.0 | 0.5 | **6** | S11 |
 | TD-19 | Rate limiting middleware (slowapi — 100 req/min per IP) on all services | Backend | 8 | 2 | 0.8 | 2.0 | **6** | S12 |
 | TD-20 | Alembic downgrade() functions for migrations 001 + 002 | DB | 4 | 2 | 0.8 | 1.0 | **6** | S12 |
+| TD-34 | ai-service: provider-agnostic LLM abstraction (`LLMProvider` interface) with GCP Vertex AI as first concrete implementation — categorization/insights/OCR currently rule-based, no LLM at all; abstraction avoids re-doing this when a real model is wired in | Backend | 5 | 2 | 0.8 | 1.0 | **8** | S18 |
 
 ### New Feature Backlog — Operator / Admin
 
@@ -493,7 +494,10 @@ Legend: ✅ Done · 🔶 Stub/partial · 🔲 Planned · N/A Not applicable
 | Sprint 12 | Data reliability + app correctness + cost visibility | ✅ Done | `sprint-12-done` |
 | Sprint 13 | Security hardening + observability + admin cost dashboard + RBAC | ✅ Done | `sprint-13-rbac-baseline` |
 | **Sprint 14** | **Multi-user organisations (backend)** | ✅ Done | `sprint-14-done` |
-| Sprint 15 | Org switching UI (web + mobile) | 🔲 Next | — |
+| Sprint 15 | Org switching UI (web + mobile) | ✅ Done | `sprint-15-done` |
+| Sprint 16 | Org hardening — NOT NULL, read_only enforcement, audit log, invite notifications | ✅ Done | `sprint-16-done` |
+| Sprint 17 | Granular org permissions + transactional email delivery | ✅ Done | `sprint-17-done` |
+| Sprint 18 | TBD — see deferred items in SPRINT-LOG Sprint 17 | 🔲 Next | — |
 | Phase 2 | Growth features | 🔲 | — |
 | Phase 3 | Scale + platform | 🔲 | — |
 | Phase 4 | Embedded finance | 🔲 | — |

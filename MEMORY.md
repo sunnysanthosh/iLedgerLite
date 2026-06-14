@@ -4,11 +4,11 @@ This file captures key project state for resuming work across sessions.
 
 ## Project State
 
-- **Total tests:** 86 passing (15 auth + 18 user + 27 transaction + 26 ledger)
-- **Completed sprints:** 0 (auth), 1 (user + shared), 2 (transaction), 3 (ledger)
-- **Next sprint:** 4 (report-service + notification-service)
-- **Services with full implementations:** auth-service, user-service, transaction-service, ledger-service
-- **Services still skeleton:** report-service, ai-service, notification-service, sync-service
+- **Total tests:** 180 passing (15 auth + 34 user + 32 transaction + 30 ledger + 18 report + 21 notification + 16 ai + 14 sync) + 13 smoke + 26 regression
+- **Completed sprints:** 0–17 (auth, user, transaction, ledger, report/notification, sync/ai, migrations, K8s, Terraform, Flutter, Next.js, GCP staging, HA/TLS, data reliability, security/RBAC, multi-user orgs backend+UI, org hardening, granular permissions + email delivery)
+- **Next sprint:** 18 (TBD — see `docs/SPRINT-LOG.md` Sprint 17 "Deferred to Sprint 18" and `docs/SaaSpocalypse-Assessment.md`)
+- **Services with full implementations:** all 8 (auth, user, transaction, ledger, report, ai, notification, sync)
+- **ai-service caveat:** despite the name, categorization/insights/OCR are rule-based (keyword match, mocked OCR) — no real LLM yet. TD-34 tracks adding a provider-agnostic `LLMProvider` abstraction with GCP Vertex AI as the first implementation.
 
 ## Critical Patterns
 
@@ -38,23 +38,25 @@ This file captures key project state for resuming work across sessions.
 
 ## Resume Context
 
-### Sprint 4 — Report Service + Notification Service
+### Sprint 18 — candidate scope (not yet started)
 
-**Report Service (port 8005):**
-- Endpoints: profit-loss, cashflow, budget, summary, export (PDF/Excel)
-- Reads from transaction and ledger databases (or their APIs)
-- Aggregate calculations for financial reporting
-
-**Notification Service (port 8007):**
-- Endpoints: list notifications, mark as read, trigger credit reminder
-- Channels: email (SMTP), SMS (stub), push (FCM stub)
-- Notification model: user_id, type, message, is_read, sent_at
+Deferred from Sprint 17 (see `docs/SPRINT-LOG.md`):
+- Org deletion / transfer ownership flows
+- TD-34: provider-agnostic `LLMProvider` abstraction for `ai-service`, GCP Vertex AI as first
+  concrete implementation (categorization/insights/OCR currently rule-based — no LLM at all)
+- Agent-native foundations from `docs/SaaSpocalypse-Assessment.md`:
+  - `actor_type` (human|agent) on `audit_log`
+  - tool/contract layer over existing service APIs (scoped via Sprint 17's `require_scope`)
+  - "agent proposes, human approves" spike flow
+  - pull "Public API + API keys" and "Webhooks" forward from Phase 3 into Phase 2
 
 **Shared infrastructure already in place:**
 - `shared/configs/base_settings.py` — common Settings base (DB URL, Redis URL)
 - `shared/utils/pagination.py` — PaginationParams dependency, paginated response helper
 - `shared/utils/auth.py` — `get_current_user` dependency (decode JWT, usable by any service)
+- `services/<name>-service/services/security.py` — `get_org_member`, `get_write_member`,
+  `require_scope(scope)` dependencies for org-scoped + permission-scoped access
 
-**Testing pattern:** Each service has its own `tests/` directory with `conftest.py` providing async test fixtures (test DB, test client, auth headers). Use `pytest tests/` from the service directory.
+**Testing pattern:** Each service has its own `tests/` directory with `conftest.py` providing async test fixtures (test DB, test client, auth headers). Use `pytest tests/` from the service directory. Four-gate CI: `make test-schema && make test-all && make test-smoke && make test-regression` (or `make test-e2e`).
 
-**Database:** PostgreSQL 16 with schema in `database/schema.sql`. Tables: users, accounts, transactions, categories, customers, ledger_entries, receipts, user_settings.
+**Database:** PostgreSQL 16 with schema in `database/schema.sql`, 8 Alembic migrations. Tables: users, accounts, transactions, categories, customers, ledger_entries, receipts, user_settings, organisations, org_memberships (with `permissions` JSON), audit_log.
