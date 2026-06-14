@@ -298,6 +298,11 @@ make test-e2e
 
 All four must exit 0. A green service unit suite alone is not sufficient for merge.
 
+> **All four gates run entirely locally (`.venv`, no Docker/cloud needed) — never start
+> staging to run `make test-e2e`.** Staging (GKE + Cloud SQL) is started only for a true
+> end-to-end run against the *deployed* environment (post-deploy verification), and stopped
+> immediately afterward. See `docs/operations/environment-lifecycle.md` § "Where Do Tests Run?".
+
 ### Sprint closure — documentation and tagging
 - [ ] `docs/SPRINT-LOG.md` — delivered endpoints, test counts, key decisions
 - [ ] `docs/API.md` — new/changed endpoint documentation

@@ -57,9 +57,10 @@ The on-demand model costs $0 extra in tooling — it is pure discipline enforced
 | Check what is running locally | `make dev-status` |
 | Follow logs for all local services | `make dev-logs` |
 | Clean slate (wipe local DB) | `make dev-reset` (confirms before running) |
-| Start staging before a test run | GitHub Actions → **Staging — Start** |
+| Run the 4-gate sprint test suite | `make test-e2e` — **local only, no cloud needed** |
+| Start staging for a true E2E run against the deployed env | GitHub Actions → **Staging — Start** |
 | Start staging before a deploy | Staging starts automatically via `deploy.yml` |
-| Stop staging early (before nightly cron) | GitHub Actions → **Staging — Stop** |
+| Stop staging immediately after the E2E run finishes | GitHub Actions → **Staging — Stop** (don't wait for the nightly cron) |
 | Deploy to staging | GitHub Actions → **Deploy** → staging |
 | Deploy to production | GitHub Actions → **Deploy** → production (requires review) |
 
@@ -156,6 +157,28 @@ regardless of on/off state. GKE cluster management is free for the first zonal c
 3. **Never scale production to 0.** Production is always-on, always HA. The on-demand model applies only to dev and staging.
 4. **Stopping ≠ deleting.** `make dev-stop` and `Staging — Stop` both preserve data. Nothing is lost.
 5. **`make dev-reset` and `dev-rebuild` are different.** Reset wipes data. Rebuild only rebuilds images.
+6. **Staging is for end-to-end runs only — everything else is local.** See "Where Do Tests Run?" below.
+
+---
+
+## Where Do Tests Run?
+
+> **Default to local. Staging (GKE + Cloud SQL) is started only for a true end-to-end run
+> against the deployed environment, and stopped again immediately afterward.**
+
+| Test | Where | Command |
+|---|---|---|
+| Unit tests (per service) | Local — `.venv`, no Docker needed | `make test-auth`, `make test-user`, etc. |
+| 4-gate sprint suite (schema + unit + smoke + regression) | Local — `.venv`, no Docker needed | `make test-e2e` |
+| Manual API exploration / integration debugging | Local Docker Compose | `make dev-start` → hit `localhost:8001-8008` |
+| **True end-to-end against the deployed staging stack** (post-deploy verification, pre-release sanity check) | **Staging (GCP)** — start it for this run only | `Staging — Start` → run the check → `Staging — Stop` |
+
+Staging should sit at **0 GKE nodes / Cloud SQL stopped** the vast majority of the time. The
+only reason to start it is to verify the *actual deployed* environment (ingress, TLS, real
+Cloud SQL connectivity, K8s manifests) — something `make test-e2e` and Docker Compose
+deliberately cannot do, since they run against local fixtures/SQLite-backed test sessions, not
+the GKE cluster. Once that verification is done, stop staging immediately — don't leave it
+running "just in case" and don't wait for the nightly cron.
 
 ---
 
