@@ -13,3 +13,4 @@
 | 2026-04-05 | sprint-15-done |  | db-f1-micro | STOPPED | auto-captured |
 | 2026-04-05 | sprint-16-done |  | db-f1-micro | STOPPED | auto-captured |
 | 2026-05-02 | sprint-17-permissions-done |  | db-f1-micro | STOPPED | auto-captured |
+| 2026-06-14 | sprint-17-done | err | db-f1-micro | STOPPED | auto-captured |
