@@ -5,7 +5,7 @@ name: Deploy
 #
 #   KUBECONFIG   : base64-encoded kubeconfig for the target GKE cluster
 #                  gcloud container clusters get-credentials ledgerlite-staging \
-#                    --region us-central1 --project <project-id> \
+#                    --zone us-central1-a --project <project-id> \
 #                    && cat ~/.kube/config | base64 | pbcopy
 #   DB_PASSWORD  : Cloud SQL ledgerlite user password
 #   JWT_SECRET   : HS256 JWT signing secret (shared across all 8 services)

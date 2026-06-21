@@ -63,7 +63,7 @@ jobs:
 
           if [ "${{ steps.gcp_auth.outcome }}" = "success" ]; then
             GKE_NODES=$(gcloud container clusters describe ledgerlite-staging \
-              --region us-central1 \
+              --zone us-central1-a \
               --format="value(currentNodeCount)" 2>/dev/null || echo "err")
             SQL_TIER=$(gcloud sql instances describe ledgerlite-staging-pg \
               --format="value(settings.tier)" 2>/dev/null || echo "err")

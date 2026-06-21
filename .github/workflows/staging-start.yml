@@ -21,7 +21,7 @@ permissions:
 
 env:
   PROJECT_ID: project-6737f3c2-e011-49b7-ae4
-  REGION: us-central1
+  ZONE: us-central1-a
   CLUSTER: ledgerlite-staging
   NODE_POOL: ledgerlite-staging-nodes
   SQL_INSTANCE: ledgerlite-staging-pg
@@ -83,7 +83,7 @@ jobs:
           gcloud container clusters resize "${{ env.CLUSTER }}" \
             --node-pool "${{ env.NODE_POOL }}" \
             --num-nodes "${NODE_COUNT}" \
-            --region "${{ env.REGION }}" \
+            --zone "${{ env.ZONE }}" \
             --project "${{ env.PROJECT_ID }}" \
             --quiet
 
@@ -93,7 +93,7 @@ jobs:
       - name: Get GKE credentials
         run: |
           gcloud container clusters get-credentials "${{ env.CLUSTER }}" \
-            --region "${{ env.REGION }}" \
+            --zone "${{ env.ZONE }}" \
             --project "${{ env.PROJECT_ID }}"
 
       - name: Wait for nodes ready

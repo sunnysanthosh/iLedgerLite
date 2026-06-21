@@ -30,7 +30,7 @@ Run this locally after authenticating with gcloud:
 ```bash
 # Staging
 gcloud container clusters get-credentials ledgerlite-staging \
-  --region us-central1 \
+  --zone us-central1-a \
   --project project-6737f3c2-e011-49b7-ae4
 
 # Encode and copy to clipboard

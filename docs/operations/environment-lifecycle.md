@@ -58,11 +58,90 @@ The on-demand model costs $0 extra in tooling — it is pure discipline enforced
 | Follow logs for all local services | `make dev-logs` |
 | Clean slate (wipe local DB) | `make dev-reset` (confirms before running) |
 | Run the 4-gate sprint test suite | `make test-e2e` — **local only, no cloud needed** |
-| Start staging for a true E2E run against the deployed env | GitHub Actions → **Staging — Start** |
+| Start staging for a true E2E run against the deployed env | GitHub Actions → **Staging — Start** (zonal cluster, `us-central1-a`) |
 | Start staging before a deploy | Staging starts automatically via `deploy.yml` |
 | Stop staging immediately after the E2E run finishes | GitHub Actions → **Staging — Stop** (don't wait for the nightly cron) |
 | Deploy to staging | GitHub Actions → **Deploy** → staging |
 | Deploy to production | GitHub Actions → **Deploy** → production (requires review) |
+
+---
+
+## Bringing Up GCP — Step by Step
+
+> **Stop and check first: have you run `make test-e2e` locally and had it pass?**
+> If not, do that first. GCP is the *last* step in the testing chain, not a
+> debugging tool — see "Where Do Tests Run?" below for the full policy.
+> Everything in this section assumes local has already confirmed the change works.
+
+### Staging (the common case)
+
+**Preferred — GitHub Actions:** `Actions → Staging — Start → Run workflow`
+([staging-start.yml](../../.github/workflows/staging-start.yml)). This is what
+should be used for ~95% of bring-ups (pre-deploy checks, post-deploy E2E runs).
+It starts Cloud SQL, scales the node pool, waits for nodes to be `Ready`, and
+rolls out any pods stuck from the prior stop — all in one step.
+
+**Manual (only when you need local `kubectl` access — e.g. debugging a deploy):**
+
+```bash
+export PATH="/opt/homebrew/share/google-cloud-sdk/bin:$PATH"
+
+# 1. Start Cloud SQL
+gcloud sql instances patch ledgerlite-staging-pg --activation-policy=ALWAYS
+
+# 2. Scale the GKE node pool up — staging is a ZONAL cluster (us-central1-a)
+gcloud container clusters resize ledgerlite-staging \
+  --node-pool ledgerlite-staging-nodes --num-nodes 1 \
+  --zone us-central1-a --quiet
+
+# 3. Get kubectl credentials
+gcloud container clusters get-credentials ledgerlite-staging \
+  --zone us-central1-a --project project-6737f3c2-e011-49b7-ae4
+
+# 4. Verify
+kubectl get nodes
+kubectl get pods -n ledgerlite-staging
+```
+
+**Immediately after your test session — tear it back down** (don't wait for the
+22:00 UTC nightly cron):
+
+```bash
+# Scale node pool back to 0
+gcloud container clusters resize ledgerlite-staging \
+  --node-pool ledgerlite-staging-nodes --num-nodes 0 \
+  --zone us-central1-a --quiet
+
+# Stop Cloud SQL
+gcloud sql instances patch ledgerlite-staging-pg --activation-policy=NEVER
+```
+
+Or just run **Staging — Stop** from GitHub Actions, which does the same thing.
+
+> **Why `--zone` and not `--region`?** Staging was converted to a zonal cluster
+> in `us-central1-a` to eliminate GKE's regional control-plane management fee
+> (~$73/month, billed even at 0 nodes). A zonal cluster gets that fee waived
+> under GCP's free tier (one zonal cluster per billing account). Production
+> stays regional for control-plane HA — see below.
+
+### Production
+
+Production is **always-on and never scaled to 0** (see Rule 3 below) — there is
+no routine "bring it up" step. The commands here apply only to **initial
+provisioning** or **disaster recovery** (cluster lost/corrupted), and any
+production change requires review per the CI/CD rules in `CLAUDE.md`:
+
+```bash
+export PATH="/opt/homebrew/share/google-cloud-sdk/bin:$PATH"
+
+# Provision/recover the production GKE cluster (regional, multi-zone control plane)
+cd infrastructure/terraform
+terraform apply -target=module.gke -var-file=envs/production.tfvars
+
+# Get kubectl credentials
+gcloud container clusters get-credentials ledgerlite-production --region us-central1 \
+  --project project-6737f3c2-e011-49b7-ae4
+```
 
 ---
 
