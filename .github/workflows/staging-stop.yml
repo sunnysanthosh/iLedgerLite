@@ -15,7 +15,7 @@ permissions:
 
 env:
   PROJECT_ID: project-6737f3c2-e011-49b7-ae4
-  REGION: us-central1
+  ZONE: us-central1-a
   CLUSTER: ledgerlite-staging
   NODE_POOL: ledgerlite-staging-nodes
   SQL_INSTANCE: ledgerlite-staging-pg
@@ -46,7 +46,7 @@ jobs:
       - name: Scale GKE node pool to 0
         run: |
           CURRENT_NODES=$(gcloud container clusters describe "${{ env.CLUSTER }}" \
-            --region "${{ env.REGION }}" --project "${{ env.PROJECT_ID }}" \
+            --zone "${{ env.ZONE }}" --project "${{ env.PROJECT_ID }}" \
             --format="value(currentNodeCount)" 2>/dev/null || echo "0")
           echo "GKE current node count: ${CURRENT_NODES}"
 
@@ -57,7 +57,7 @@ jobs:
             gcloud container clusters resize "${{ env.CLUSTER }}" \
               --node-pool "${{ env.NODE_POOL }}" \
               --num-nodes 0 \
-              --region "${{ env.REGION }}" \
+              --zone "${{ env.ZONE }}" \
               --project "${{ env.PROJECT_ID }}" \
               --quiet
             echo "✅ GKE node pool scaled to 0 — no node compute charges until next start"

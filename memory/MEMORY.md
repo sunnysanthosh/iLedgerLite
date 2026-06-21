@@ -32,7 +32,7 @@ terraform apply -var-file=envs/staging.tfvars
 
 # 5. Connect kubectl
 gcloud container clusters get-credentials ledgerlite-staging \
-  --region us-central1 --project project-6737f3c2-e011-49b7-ae4
+  --zone us-central1-a --project project-6737f3c2-e011-49b7-ae4
 
 # 6. GHCR pull secret (if packages are private)
 kubectl create namespace ledgerlite-staging

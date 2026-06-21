@@ -52,5 +52,5 @@ output "redis_url" {
 
 output "connect_to_cluster" {
   description = "Command to configure kubectl"
-  value       = "gcloud container clusters get-credentials ${module.gke.cluster_name} --region ${var.region} --project ${var.project_id}"
+  value       = var.environment == "production" ? "gcloud container clusters get-credentials ${module.gke.cluster_name} --region ${var.region} --project ${var.project_id}" : "gcloud container clusters get-credentials ${module.gke.cluster_name} --zone ${var.region}-a --project ${var.project_id}"
 }

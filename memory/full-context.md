@@ -289,7 +289,7 @@ REDIS_URL: "redis://redis:6379"   # already set, leave as-is
 ```bash
 # Use the exact command from terraform output "connect_to_cluster"
 gcloud container clusters get-credentials ledgerlite-staging \
-  --region us-central1 --project project-6737f3c2-e011-49b7-ae4
+  --zone us-central1-a --project project-6737f3c2-e011-49b7-ae4
 ```
 
 ### GHCR pull secret (only if packages are private)

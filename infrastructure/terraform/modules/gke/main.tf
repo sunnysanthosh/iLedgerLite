@@ -1,6 +1,6 @@
 resource "google_container_cluster" "main" {
   name     = "ledgerlite-${var.env}"
-  location = var.region
+  location = var.cluster_location
   project  = var.project_id
 
   # Defer to the managed node pool below
@@ -47,7 +47,7 @@ resource "google_container_cluster" "main" {
 resource "google_container_node_pool" "nodes" {
   name       = "ledgerlite-${var.env}-nodes"
   cluster    = google_container_cluster.main.name
-  location   = var.region
+  location   = var.cluster_location
   project    = var.project_id
   node_count = var.node_count
 

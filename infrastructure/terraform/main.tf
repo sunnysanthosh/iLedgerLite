@@ -56,18 +56,19 @@ module "vpc" {
 module "gke" {
   source              = "./modules/gke"
   project_id          = var.project_id
-  region              = var.region
   env                 = var.environment
   network             = module.vpc.network_name
   subnetwork          = module.vpc.subnetwork_name
   pods_range_name     = module.vpc.pods_range_name
   services_range_name = module.vpc.services_range_name
-  # staging: 1 preemptible e2-medium, public nodes (no NAT cost)
-  # production: 2 standard e2-standard-2, private nodes
+  # staging: 1 preemptible e2-medium, public nodes (no NAT cost), zonal cluster
+  #   (zonal waives the GKE control-plane management fee — staging has no HA requirement)
+  # production: 2 standard e2-standard-2, private nodes, regional cluster (multi-zone control-plane HA)
   enable_private_nodes = var.environment == "production"
   node_count           = var.environment == "production" ? 2 : 1
   machine_type         = var.environment == "production" ? "e2-standard-2" : "e2-medium"
   preemptible          = var.environment != "production"
+  cluster_location     = var.environment == "production" ? var.region : "${var.region}-a"
   depends_on           = [module.vpc, module.iam]
 }
 

@@ -2,8 +2,9 @@ variable "project_id" {
   type = string
 }
 
-variable "region" {
-  type = string
+variable "cluster_location" {
+  type        = string
+  description = "Cluster/node pool location. A zone (e.g. us-central1-a) makes this a zonal cluster, which waives the GKE control-plane management fee (free tier covers one zonal cluster per billing account). The region itself makes it regional (multi-zone control plane, no fee waiver) — use for production HA."
 }
 
 variable "env" {
