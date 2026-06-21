@@ -1,6 +1,6 @@
 SERVICES := auth-service user-service transaction-service ledger-service report-service notification-service ai-service sync-service
 
-.PHONY: test-all test-smoke test-regression test-schema test-e2e test-auth test-user test-transaction test-ledger \
+.PHONY: test-all test-smoke test-regression test-schema test-e2e test-cloud test-auth test-user test-transaction test-ledger \
         test-report test-notification test-ai test-sync lint format \
         dev-start dev-stop dev-rebuild dev-status dev-logs dev-reset
 
@@ -75,6 +75,14 @@ test-schema:
 ## Usage: make test-e2e
 test-e2e: test-schema test-all test-smoke test-regression
 	@echo "\n===== All gates passed (schema + unit + smoke + regression) ====="
+
+## Layer 5 (manual, cloud-only) — verifies the DEPLOYED staging stack via real
+## HTTP through ingress + TLS + Cloud SQL. Requires staging to be running
+## (GitHub Actions: Staging — Start) and is never part of test-e2e or PR CI.
+## Usage: CLOUD_BASE_URL=https://api.staging.ledgerlite.app make test-cloud
+test-cloud:
+	CLOUD_BASE_URL=$${CLOUD_BASE_URL:-https://api.staging.ledgerlite.app} \
+	  python -m pytest tests/cloud/ -v
 
 test-auth:
 	cd services/auth-service && python -m pytest tests/ -v

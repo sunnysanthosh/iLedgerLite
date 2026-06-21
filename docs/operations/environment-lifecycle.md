@@ -250,7 +250,7 @@ regardless of on/off state. GKE cluster management is free for the first zonal c
 | Unit tests (per service) | Local — `.venv`, no Docker needed | `make test-auth`, `make test-user`, etc. |
 | 4-gate sprint suite (schema + unit + smoke + regression) | Local — `.venv`, no Docker needed | `make test-e2e` |
 | Manual API exploration / integration debugging | Local Docker Compose | `make dev-start` → hit `localhost:8001-8008` |
-| **True end-to-end against the deployed staging stack** (post-deploy verification, pre-release sanity check) | **Staging (GCP)** — start it for this run only | `Staging — Start` → run the check → `Staging — Stop` |
+| **True end-to-end against the deployed staging stack** (post-deploy verification, pre-release sanity check) | **Staging (GCP)** — start it for this run only | `Staging — Start` → **Cloud — Verify** → `Staging — Stop` |
 
 Staging should sit at **0 GKE nodes / Cloud SQL stopped** the vast majority of the time. The
 only reason to start it is to verify the *actual deployed* environment (ingress, TLS, real
@@ -258,6 +258,23 @@ Cloud SQL connectivity, K8s manifests) — something `make test-e2e` and Docker 
 deliberately cannot do, since they run against local fixtures/SQLite-backed test sessions, not
 the GKE cluster. Once that verification is done, stop staging immediately — don't leave it
 running "just in case" and don't wait for the nightly cron.
+
+### Cloud — Verify: the cloud-only test suite
+
+`tests/cloud/` is a **separate** pytest suite from the local 4-gate suite — it makes real HTTP
+requests over the public internet to the deployed stack (real ingress, real TLS via
+cert-manager, real Cloud SQL), instead of in-process ASGI calls against SQLite. It proves things
+the local suite structurally cannot: that `JWT_SECRET` was applied identically across all 8
+deployments, that ingress routing and the TLS cert actually work, and that a real Cloud SQL
+round-trip succeeds.
+
+- Run via GitHub Actions → **Cloud — Verify** (`workflow_dispatch` only — never runs on push/PR).
+- Or locally once staging is up: `make test-cloud` (defaults to
+  `CLOUD_BASE_URL=https://api.staging.ledgerlite.app`).
+- It is **not** part of `make test-e2e` and never will be — `test-e2e` stays local-only,
+  per the Quick Reference table above.
+- Uses a fixed, idempotent test identity (`cloud-verify@ledgerlite.internal`) and leaves its
+  test data in staging by design — staging is disposable, so there is no cleanup step.
 
 ---
 
@@ -286,3 +303,5 @@ in one session.
 | [../../Makefile](../../Makefile) | All `make dev-*` and `make test-*` targets |
 | [../../.github/workflows/staging-start.yml](../../.github/workflows/staging-start.yml) | Staging start workflow source |
 | [../../.github/workflows/staging-stop.yml](../../.github/workflows/staging-stop.yml) | Staging stop workflow source (nightly cron) |
+| [../../.github/workflows/cloud-verify.yml](../../.github/workflows/cloud-verify.yml) | Cloud — Verify workflow source (manual-only, real HTTP against a deployed environment) |
+| [../../tests/cloud/](../../tests/cloud/) | The cloud-only test suite itself |
