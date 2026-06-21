@@ -1,0 +1,41 @@
+name: Cloud — Verify
+
+# Manual-only: verifies a LIVE deployed environment via real HTTP through
+# ingress + TLS + Cloud SQL. Never runs on push/PR — it requires the target
+# environment (staging by default) to already be running, and is not a
+# substitute for the local 4-gate suite (`make test-e2e`), which must pass
+# first. See docs/operations/environment-lifecycle.md "Where Do Tests Run?".
+#
+# Typical flow: Staging — Start  →  Cloud — Verify  →  Staging — Stop
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Base URL of the deployed environment to verify"
+        required: false
+        default: "https://api.staging.ledgerlite.app"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify deployed stack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.7"
+
+      - name: Install test dependencies
+        run: pip install -r tests/cloud/requirements.txt
+
+      - name: Run cloud verification suite
+        env:
+          CLOUD_BASE_URL: ${{ inputs.base_url }}
+          CLOUD_TEST_PASSWORD: ${{ secrets.CLOUD_TEST_PASSWORD }}
+        run: python -m pytest tests/cloud/ -v
