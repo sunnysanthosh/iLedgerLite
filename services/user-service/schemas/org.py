@@ -58,6 +58,10 @@ class OrgResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class OrgTransfer(BaseModel):
+    to_user_id: uuid.UUID
+
+
 class OrgListItem(BaseModel):
     id: uuid.UUID
     name: str
